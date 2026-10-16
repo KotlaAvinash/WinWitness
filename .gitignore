@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+camtool_output_*/
+# never commit evidence or results
+*.db
+*.db-wal
+*.db-shm
+*.FileSlack
+$I30
+*.sqlite
