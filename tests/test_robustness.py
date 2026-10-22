@@ -196,6 +196,39 @@ class TestFuzz(unittest.TestCase):
                 self._analyze(files)
 
 
+class TestMergedFreeblocks(unittest.TestCase):
+    """Two neighbouring rows deleted one after the other: SQLite writes a freeblock header into each cell
+    and then merges them, so every cell in the merged block has lost its first 4 bytes."""
+
+    def test_adjacent_deleted_rows_all_recovered(self):
+        d = tempfile.mkdtemp(prefix="cammerge_")
+        try:
+            p = os.path.join(d, M.CAM_DB)
+            con = sqlite3.connect(p, isolation_level=None)
+            con.execute("PRAGMA secure_delete=OFF")
+            for s in FX.CAM_SCHEMA:
+                con.execute(s)
+            for s in FX.CAM_ALTERS:
+                con.execute(s)
+            con.execute("INSERT INTO Capabilities VALUES(10,'contacts')")
+            for i in range(1001, 1061):
+                con.execute("INSERT INTO PackagedUsageHistory VALUES(?,?,?,0,10,25,1,0,2,10,0)",
+                            (i, FX.FT0 + i * 10**9, FX.FT0 + i * 10**9))
+            gone = [1020, 1021, 1022, 1040, 1041]
+            want = {}
+            for i in gone:                      # separate statements -> separate freeblock headers, then merged
+                want[i] = con.execute("select LastUsedTimeStart from PackagedUsageHistory where ID=?", (i,)).fetchone()[0]
+                con.execute("DELETE FROM PackagedUsageHistory WHERE ID=?", (i,))
+            con.close()
+            ev = E.load_evidence(p)
+            A = E.analyze_db(M.CAM_DB, ev, None, None, d, lambda m: None)
+            E.carve_db(A, [], lambda m: None)
+            got = {c.values[1] for c in A.carved if c.table == "PackagedUsageHistory" and c.status.startswith("DELETED")}
+            self.assertEqual(set(want.values()) - got, set(), f"not recovered: {sorted(set(want.values()) - got)}")
+        finally:
+            shutil.rmtree(d, ignore_errors=True)
+
+
 class TestHeaderRepairSmallIds(unittest.TestCase):
     """Rows with ID < 128 lose header-length AND first serial to the freeblock header."""
 

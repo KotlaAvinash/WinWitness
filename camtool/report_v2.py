@@ -100,10 +100,10 @@ background:var(--surface-2);border-radius:20px;padding:1px 9px}
 .tip{position:fixed;pointer-events:none;background:var(--text);color:var(--bg);font-size:12px;padding:6px 9px;border-radius:7px;z-index:50;display:none;max-width:280px}
 .day{margin:16px 0 6px;display:flex;align-items:baseline;gap:10px;position:sticky;top:53px;z-index:5;background:var(--bg);padding:4px 0}
 .day b{font-size:14px}.day span{color:var(--muted);font-size:12px}
-.ev{display:grid;grid-template-columns:150px minmax(0,2fr) minmax(0,1.1fr) 150px minmax(0,1.3fr) 160px 18px;gap:10px;align-items:center;padding:9px 14px;
+.ev{display:grid;grid-template-columns:168px minmax(0,2fr) minmax(0,1.1fr) 150px minmax(0,1.3fr) 160px 18px;gap:10px;align-items:center;padding:9px 14px;
 border:1px solid var(--line);background:var(--surface);border-radius:11px;margin-bottom:5px;cursor:pointer}
 .ev:hover{border-color:var(--accent)}.ev>*{min-width:0}.ev .badge{white-space:normal}
-.evh{display:grid;grid-template-columns:150px minmax(0,2fr) minmax(0,1.1fr) 150px minmax(0,1.3fr) 160px 18px;gap:10px;padding:2px 15px 6px;font-size:11px;font-weight:600;letter-spacing:.3px;text-transform:uppercase;color:var(--muted)}
+.evh{display:grid;grid-template-columns:168px minmax(0,2fr) minmax(0,1.1fr) 150px minmax(0,1.3fr) 160px 18px;gap:10px;padding:2px 15px 6px;font-size:11px;font-weight:600;letter-spacing:.3px;text-transform:uppercase;color:var(--muted)}
 @media (max-width:980px){.ev{grid-template-columns:1fr 1fr}.evh,.ev .chev{display:none}}
 .ev .t .tz{font-size:10.5px;font-weight:600;color:var(--accent);margin-left:4px}
 .chev{color:var(--muted);font-size:18px;transition:transform .15s;text-align:center}.ev.open .chev{transform:rotate(90deg)}
@@ -182,7 +182,7 @@ function dayLabel(d){if(!d)return 'Date not recorded';const x=new Date(d+'T00:00
 function sentence(r){if(r.event==='prompt')return `Windows asked for <b>${esc(r.feature)}</b> permission for <b>${esc(r.app)}</b>.`;
 return `<b>${esc(r.app)}</b> used <b>${esc(r.feature)}</b> ${r.duration_text==='end not recorded'?'(end time not recorded)':r.duration_text&&r.duration_text!=='instant'?'for <b>'+esc(r.duration_text)+'</b>':r.duration_text==='instant'?'(instant access)':''} — <b>${esc(r.access.toLowerCase())}</b>${r.user?' under account '+esc(r.user):''}.`}
 function row(r,i){const loc=r.app_location||r.app_id;return `<div class="ev" data-i="${i}">
-<div class="t">${T(r)?esc(hm(T(r))):'no time'}${r.end_local||r.end_utc?' → '+esc(hm(r.end_local||r.end_utc)):''}${T(r)?`<span class="tz">${esc(D.tz)}</span>`:''}${r.when_utc?`<small>UTC ${esc(hm(r.when_utc))}${r.end_utc?' → '+esc(hm(r.end_utc)):''}</small>`:''}<small>${r.event==='use'?esc(r.duration_text||''):'permission prompt'}${r.use_no?' · '+esc(r.use_no):''}</small></div>
+<div class="t">${T(r)?esc(hm(T(r))):'no time'}${hm(r.end_local||r.end_utc)&&hm(r.end_local||r.end_utc)!==hm(T(r))?' → '+esc(hm(r.end_local||r.end_utc)):''}${T(r)?`<span class="tz">${esc(D.tz)}</span>`:''}${r.when_utc?`<small>UTC ${esc(hm(r.when_utc))}${hm(r.end_utc)&&hm(r.end_utc)!==hm(r.when_utc)?' → '+esc(hm(r.end_utc)):''}</small>`:''}<small>${r.event==='use'?esc(r.duration_text||''):'permission prompt'}${r.use_no?' · '+esc(r.use_no):''}</small></div>
 <div class="app"><span class="av" style="box-shadow:inset 0 0 0 2px var(--s${svcSlot(r.feature)})">${esc((r.app||'?').replace(/^unknown /,'?').slice(0,1).toUpperCase())}</span>
 <div style="min-width:0"><div class="nm">${esc(r.app)}</div><small>${esc(r.app_kind)}${loc?' · '+esc(loc):''}</small></div></div>
 <div>${svcBadge(r.feature)}</div><div>${accBadge(r.access)}</div><div class="who">${who(r.user)}</div><div>${srcBadge(r.source)}</div><div class="chev" title="Show full record">›</div>

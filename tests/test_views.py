@@ -39,7 +39,7 @@ class TestLabels(unittest.TestCase):
         self.assertEqual(V.feature_label("someNewCap"), "someNewCap")
         self.assertTrue(V.service_desc("microphone"))
         self.assertEqual(V.app_label(MAIL), "Mail and Calendar")
-        self.assertEqual(V.app_label(BRAVE), "Brave")
+        self.assertEqual(V.app_label(BRAVE), "Brave Browser")
         self.assertEqual(V.app_label("Contoso.SuperNotes_abcdefghijklm"), "SuperNotes")
         self.assertEqual(V.app_label(MAIL, "Mail and Calendar"), "Mail and Calendar")
 
@@ -101,6 +101,11 @@ class TestActivity(unittest.TestCase):
         self.assertEqual([r["source"] for r in a], ["Recovered (deleted)", "Recovered (WAL slack)"])
         self.assertEqual(a[1]["app"], "unknown app (purged, ID 28)")
 
+    def test_recovered_row_without_id_has_readable_ref(self):
+        u = usage(None, ft(1), ft(2), "contacts", MAIL, source="carved", status="DELETED (ID lost)")
+        a = V.build_activity(cam([], carved=[u]), [], None, {}, IST)
+        self.assertEqual(a[0]["ref"], "PackagedUsageHistory (row ID lost: cell start overwritten)")
+
     def test_recovered_row_with_purged_package_not_named_from_reused_appname(self):
         c = cam([], carved=[usage(7, ft(1), ft(2), "contacts", "<unresolved PackageFamilyNames ID 29: purged>",
                                   app_name="Brave Browser", source="carved", status="DELETED")])
@@ -120,7 +125,7 @@ class TestActivity(unittest.TestCase):
         self.assertEqual(len(a), 2)
         self.assertEqual(a[0]["source"], "Database + Registry")
         self.assertEqual(a[1]["source"], "Registry (last use)")
-        self.assertEqual(a[1]["app"], "Brave")
+        self.assertEqual(a[1]["app"], "Brave Browser")
         self.assertEqual(a[1]["feature"], "Microphone")
         self.assertIn("changed after this use", a[1]["note"])
 

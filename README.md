@@ -6,6 +6,117 @@ It reads the databases together with their write-ahead log (WAL), WAL index (SHM
 
 It is pure Python 3.10+ standard library, with nothing to install, and runs on Windows, Linux and macOS.
 
+![CAMtool report: summary](docs/images/overview.png)
+
+---
+
+## Screenshots
+
+All screenshots use **invented demo data** (fake account `S-1-5-21-1111111111-2222222222-3333333333-1001`, user folder `analyst`). The demo is a short story: Teams and Zoom calls, Mail reading contacts, Snipping Tool captures, browser passkeys, and an unknown `recorder.exe` run from Downloads that used the microphone at 2 AM. You can rebuild the same evidence yourself (see [Try it with demo data](#try-it-with-demo-data)).
+
+### Summary
+The first screen answers "what happened on this computer".
+* **The sentence** gives the period covered, how many uses of which services by how many applications, the most active app and the accounts involved, plus how many rows exist only in the `-wal` file or were recovered after deletion.
+* **The tiles** show the key numbers.
+* **The service cards** (Camera, Microphone, Contacts…) show, for each service, how many uses, by how many apps, and when it was last used. Click a card to filter the timeline to that service.
+* The **evidence unchanged (hash verified)** badge confirms that the input files were hashed before and after the run and did not change.
+
+### Activity timeline
+![Activity timeline](docs/images/timeline.png)
+
+Every use in time order, grouped by day.
+* **Filters:** search, application, service, account, source and date range. You can order oldest or newest first.
+* **Two charts follow the filters:** uses per day stacked by service, and uses by hour of the day.
+* **Each row shows:**
+
+  | Column | Content |
+  |---|---|
+  | Time | Start → end in local time (time zone shown), the same times in UTC, the duration and the use number (`#3 of 12`) |
+  | Application · location | The app and its full path |
+  | Service | The service it used |
+  | Result | Allowed, Blocked, or Permission prompt shown |
+  | Account | The user account (SID) |
+  | Recorded in | Where the evidence came from |
+
+* **Click a row** (›) to open the full record: what the service means, local and UTC times, the current permission setting, application id and location, installer, SHA-1 and the exact database record.
+
+In the screenshot, filtered to 11 October, `recorder.exe` from the Downloads folder uses the microphone for 2 h 7 min at night. A minute later it is **Blocked** from the camera.
+
+### Applications
+![Applications](docs/images/applications.png)
+
+One card per application. Each card shows:
+* the app's type (packaged MSIX app or desktop program) and location
+* the services it used, with location prompts and blocked attempts
+* the number of uses and the total time
+* the first and last use
+
+Click a card to filter the timeline to that app.
+
+### Services
+![Services](docs/images/services.png)
+
+Each service, with every application that used it: uses, blocked attempts, first and last use, total time, and a plain description of what the service is.
+
+### Permissions
+![Permissions](docs/images/permissions.png)
+
+The current Allow / Deny / Prompt settings from `CapabilityConsentStorage.db`, set against what the apps actually did.
+
+**Decided by** shows the level that holds each setting:
+* **App setting** for a single app
+* **Desktop-apps switch** ("Let desktop apps access…")
+* **User default** for one account
+* **System default** for the whole machine
+
+Rows named **All apps (global setting)** are the switches that apply to every app for a service. A Deny at a broader level blocks every app, whatever the app's own setting.
+
+**Flags:**
+* **Used while now Deny:** the app was allowed and used the service, but its setting is now Deny. The setting was probably changed afterwards.
+* **Never used:** a setting exists but no use was recorded.
+
+### Desktop programs
+![Desktop programs](docs/images/programs.png)
+
+Every desktop (non-Store) program Windows recorded:
+* its full path
+* its SHA-1, the same hash Amcache uses, so you can look the file up
+* when it was first seen
+* its number of uses and location prompts
+* its installer (if the SOFTWARE hive is supplied)
+
+Programs that ran from **Temp**, **Downloads** or **another drive** are flagged.
+
+### Recovered records
+![Recovered records](docs/images/recovered.png)
+
+Rows that are no longer in the live database: deleted rows carved from free space, and transactions found past the end of the `-wal` file.
+* **Kept separate:** they are never mixed with live data, and appear in the timeline with their own "Recorded in" label.
+* **Lost IDs:** when SQLite overwrote the start of a deleted cell, the row's values are still recovered, and the record says the ID was lost.
+
+### Light theme
+![Summary in light theme](docs/images/overview-light.png)
+
+The report follows the system theme. Use the moon button to switch between light and dark.
+
+### Desktop window (GUI)
+`python camtool_gui.py` opens a small window with these controls:
+* the evidence folder
+* the output folder
+* the local time offset
+* optional registry corroboration
+* an optional Amcache CSV
+* optional binary hashing
+
+**Run analysis** shows the live log. **Open report** opens the HTML report above.
+
+### Try it with demo data
+```bash
+python docs/demo/build_demo_evidence.py demo_evidence
+python camtool_cli.py demo_evidence -o demo_report --tz +05:30
+```
+Open `demo_report/CAM_report.html`. The demo contains live rows, rows only in the `-wal` file, deleted rows to recover, a blocked attempt, location prompts and programs run from unusual places.
+
 ---
 
 ## 1. The artifact

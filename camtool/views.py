@@ -74,7 +74,7 @@ KNOWN_PACKAGES = {
     "samsungelectronicsco.ltd.samsungaccount": "Samsung Account", "a-volute.nahimic": "Nahimic",
 }
 KNOWN_EXES = {
-    "brave.exe": "Brave", "chrome.exe": "Google Chrome", "msedge.exe": "Microsoft Edge", "firefox.exe": "Firefox",
+    "brave.exe": "Brave Browser", "chrome.exe": "Google Chrome", "msedge.exe": "Microsoft Edge", "firefox.exe": "Firefox",
     "teams.exe": "Microsoft Teams (classic)", "ms-teams.exe": "Microsoft Teams", "zoom.exe": "Zoom",
     "discord.exe": "Discord", "code.exe": "Visual Studio Code", "steamwebhelper.exe": "Steam",
     "protonvpn.exe": "Proton VPN", "protonvpn.client.exe": "Proton VPN", "dllhost.exe": "COM Surrogate (dllhost)",
@@ -343,7 +343,9 @@ def build_activity(cam: dict, wal_changes: list, reg: dict | None, names: dict, 
                 note = ("identity resolved from current lookup tables; this ID combination is not in live rows, "
                         "so an ID may have been reused after a purge: verify")
         r = base(u["app"], u["kind"], u["capability"], u.get("user_sid", ""), raw.get("LastUsedTimeStart"),
-                 raw.get("LastUsedTimeStop"), u.get("access", ""), source, f"{u['table']} ID {u['ID']}",
+                 raw.get("LastUsedTimeStop"), u.get("access", ""), source,
+                 f"{u['table']} ID {u['ID']}" if u.get("ID") is not None
+                 else f"{u['table']} (row ID lost: cell start overwritten)",
                  u.get("sha1", ""), app_name)
         if note:
             add_note(r, note)

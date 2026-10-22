@@ -142,28 +142,64 @@ def _decode_body(buf, p, types):
 
 def repair_freeblock(carver: "Carver", pg: bytes, fb: int, size: int, ends: set, source: str, file: str,
                      base_offset: int) -> list:
-    """Recover the first cell of a freeblock whose record header was partly overwritten.
+    """Recover cells of a freeblock whose record headers were partly overwritten.
 
     SQLite writes (next-freeblock u16, size u16) over the first 4 bytes of a freed cell. Those 4
     bytes held [payload-len varint][rowid varint][record header ...]. When the two varints take
     k < 4 bytes, the first 4-k header bytes (header-length and maybe the first serial type) are
     lost. With the schema known they can be rebuilt: the unknown serial is constrained by the
     column's type and, for TEXT, its length is solved from where the record must end.
+
+    Neighbouring cells deleted one after another each receive such a header before SQLite merges
+    them into one freeblock, so the block is walked cell by cell: a reading is accepted only when
+    the chain of readings ends exactly where the freeblock (or an intact carved record) ends.
     """
-    from .sqlite_low import read_varint
-    cands_all = []
+    import struct as _st
     end_lim = fb + size
-    valid_ends = set(ends) | {end_lim - e for e in range(0, 4)}
+    terminal = set(ends) | {end_lim - e for e in range(0, 4)}
+    # old (merged) freeblock headers inside the block mark where earlier freed cells began
+    inner = set()
+    for q in range(fb + 4, end_lim - 4):
+        nxt, sz = _st.unpack(">HH", pg[q:q + 4])
+        if 4 <= sz <= end_lim - q and (nxt == 0 or q < nxt < len(pg)) and (q + sz in terminal or q + sz <= end_lim):
+            inner.add(q)
+    memo: dict = {}
 
-    def score(end):
-        return 0 if end == end_lim else 1 if end in ends else 2
+    def chain(pos: int, depth: int = 0):
+        if pos in memo:
+            return memo[pos]
+        memo[pos] = None
+        if depth > 64 or end_lim - pos < 6:
+            return None
+        cands = _readings_at(carver, pg, pos, end_lim, terminal | inner)
+        # exact fit to the block end beats an intact neighbour, which beats 1-3 spare bytes, which beats a chain
+        rank = lambda e: 0 if e == end_lim else 1 if e in ends else 2 if e in terminal else 3  # noqa: E731
+        cands.sort(key=lambda c: (rank(c[3][1]), -c[0]))
+        for lost, sig, types, r, k in cands:
+            e = r[1]
+            if e in terminal:
+                memo[pos] = [(pos, sig, r, types, k)]
+                break
+            rest = chain(e, depth + 1)
+            if rest:
+                memo[pos] = [(pos, sig, r, types, k)] + rest
+                break
+        return memo[pos]
 
+    found = chain(fb) or []
+    return [_mk(sig, r, types, pos, k, source, file, base_offset) for pos, sig, r, types, k in found]
+
+
+def _readings_at(carver, pg, pos, end_lim, text_ends):
+    """All schema-consistent readings of a cell whose first 4 bytes (at pos) were overwritten."""
+    from .sqlite_low import read_varint, serial_len
+    out = []
     for k in (3, 2):                     # bytes used by payload-len + rowid varints
         lost = 4 - k                     # header bytes destroyed
         for sig in carver.sigs:
             for n in range(sig.min_cols, sig.max_cols + 1):
-                known_from = 1 if lost == 2 else 0      # index of first serial still readable
-                p = fb + 4
+                known_from = 1 if lost == 2 else 0
+                p = pos + 4
                 types_rest = []
                 try:
                     for _ in range(n - known_from):
@@ -175,43 +211,27 @@ def repair_freeblock(carver: "Carver", pg: bytes, fb: int, size: int, ends: set,
                 body_start = p
                 if lost == 2:
                     col0 = sig.columns[0]
-                    if col0.pk_alias:
-                        heads = [0]
-                    elif col0.affinity == "INTEGER":
-                        heads = [1, 2, 3, 4, 5, 6, 8, 9]
-                    else:
-                        heads = None             # TEXT: solve length from the end position
+                    heads = [0] if col0.pk_alias else [1, 2, 3, 4, 5, 6, 8, 9] if col0.affinity == "INTEGER" else None
                 else:
                     heads = [None]
-                if heads is None:
-                    from .sqlite_low import serial_len
+                if heads is None:            # TEXT first column: solve its length from a possible end
                     rest_len = sum(max(serial_len(t), 0) for t in types_rest)
-                    for end in sorted(valid_ends):
+                    for end in sorted(text_ends):
                         L = end - body_start - rest_len
-                        if not (1 <= L <= 57):    # first serial must have been a 1-byte varint
-                            continue
-                        types = [2 * L + 13] + types_rest
-                        r = _try(sig, pg, body_start, types, end_lim)
-                        if r and r[1] in valid_ends:
-                            cands_all.append((score(r[1]), lost, sig, r, types, k))
+                        if 1 <= L <= 57:
+                            types = [2 * L + 13] + types_rest
+                            r = _try(sig, pg, body_start, types, end_lim)
+                            if r:
+                                out.append((lost, sig, types, r, k))
                 else:
                     for c0 in heads:
                         types = ([c0] if c0 is not None else []) + types_rest
                         if len(types) != n:
                             continue
                         r = _try(sig, pg, body_start, types, end_lim)
-                        if r and r[1] in valid_ends:
-                            cands_all.append((score(r[1]), lost, sig, r, types, k))
-    if not cands_all:
-        return []
-    cands_all.sort(key=lambda x: (x[0], -x[1]))
-    best = cands_all[0]
-    # refuse when two different interpretations are equally good
-    ties = [c for c in cands_all if c[0] == best[0] and c[3][0] != best[3][0]]
-    rec = _mk(best[2], best[3], best[4], fb, best[5], source, file, base_offset)
-    if ties:
-        rec.extra["repair"] += f"; {len(ties)} equally scored alternative reading(s) - verify manually"
-    return [rec]
+                        if r:
+                            out.append((lost, sig, types, r, k))
+    return out
 
 
 def _try(sig, pg, body_start, types, end_lim):
