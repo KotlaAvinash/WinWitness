@@ -270,9 +270,19 @@ def build_activity(cam: dict, wal_changes: list, reg: dict | None, names: dict, 
         else:
             source = SOURCE_WAL if (u["table"], u["ID"]) in wal_ins else SOURCE_DB
         raw = u.get("raw", {})
-        rows.append(base(u["app"], u["kind"], u["capability"], u.get("user_sid", ""), raw.get("LastUsedTimeStart"),
-                         raw.get("LastUsedTimeStop"), u.get("access", ""), source, f"{u['table']} ID {u['ID']}",
-                         u.get("sha1", ""), u.get("app_name", "")))
+        app_name, note = u.get("app_name", ""), ""
+        if _PURGED.match(u["app"] or "") and app_name and not app_name.startswith("<"):
+            # The package/path lookup row is gone, so its IDs may since have been reused by newer apps:
+            # never name the row from the (possibly reused) AppName ID.
+            note = (f"application identity purged; AppName ID now reads '{app_name.replace('  [carved]', '')}' "
+                    f"in the current lookup table, but lookup IDs can be reused after a purge, so it is not used")
+            app_name = ""
+        r = base(u["app"], u["kind"], u["capability"], u.get("user_sid", ""), raw.get("LastUsedTimeStart"),
+                 raw.get("LastUsedTimeStop"), u.get("access", ""), source, f"{u['table']} ID {u['ID']}",
+                 u.get("sha1", ""), app_name)
+        if note:
+            r["note"] = "; ".join(x for x in (r["note"], note) if x)
+        rows.append(r)
     # registry last-use events: merge with identical DB events, add the rest
     index = {(r["feature_id"].lower(), r["app_id"].lower(), r["_start"]): r for r in rows}
     for e in (reg or {}).get("entries", []):

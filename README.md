@@ -76,6 +76,12 @@ Files are found automatically by name (case-insensitive):
 * `CapabilityAccessManager.db` with its `-wal`, `-shm`, `.FileSlack` and `-wal.FileSlack`
 * `CapabilityConsentStorage.db` with its `-wal`, `-shm` and `-shm.FileSlack`
 * `$I30`
+* **Optional:** `NTUSER.DAT` (also as `Users\<name>\NTUSER.DAT`) and `SOFTWARE` registry hives. They are used only if present and are never required:
+
+| Hive | Adds |
+|---|---|
+| NTUSER.DAT | The ConsentStore last-use time per app (often the only record of older camera/microphone use), per-app settings, and when each setting was last changed |
+| SOFTWARE | Account names for SIDs, the Windows version, machine-wide settings, retention settings, and **installer details** (install folder, install source, publisher, version, install date) |
 
 You can also pass a single `.db` file.
 
@@ -95,12 +101,57 @@ Exit codes: `0` ok · `1` nothing parseable · `2` bad arguments / no databases 
 ### Output
 | File | Content |
 |---|---|
-| `CAM_report.html` | Self-contained report: findings, evidence hashes, unified timeline, usage, recovered records, WAL transactions, prompts and identities, decoded consent, corroboration, page map, raw tables, method and limits. Tables are sortable and filterable. |
-| `csv/` | One CSV per dataset, including every raw table |
+| `CAM_report.html` | The analyst report (one offline file, light/dark). See "Reading the report" below |
+| `CAM_activity.xlsx` | Excel workbook with 7 sheets: Activity timeline, Applications, Services, Permissions, Desktop programs, Recovered, Findings |
+| `activity_timeline.csv` | One row per use or prompt, with columns: date, start/end (local and UTC), duration, application and type, service and what it means, Allowed/Blocked, account, allowed by, use # (e.g. `#3 of 12`), application location, installer, SHA-1, source and evidence record |
+| `apps.csv`, `services.csv`, `permissions.csv`, `programs.csv`, `recovered.csv`, `findings.csv` | The other analyst views |
+| `CAM_technical_report.html` | Database internals: page map, WAL frames and row diff, carving locations, raw tables, corroboration |
+| `csv/technical/` | One CSV per technical dataset, including every raw table |
 | `camtool_results.sqlite` | All datasets in one queryable database |
 | `camtool_results.json` | Everything, machine-readable |
 | `run_log.txt` | Timestamped log with the SHA-256 of every input |
 | `MANIFEST.sha256` | SHA-256 of every output file |
+
+### Reading the report
+1. **Summary.** One sentence covering who used what and when, key numbers, and one tile per service. Click a tile to filter the timeline.
+2. **Activity timeline.** Every use and location prompt in time order, grouped by day.
+   * Filter by text, application, service, account, source and date range. Order it oldest or newest first.
+   * A stacked per-day chart (by service) and a time-of-day chart follow the filters.
+   * Click a row to see the full record:
+     * service meaning
+     * start/end in local time and UTC
+     * duration
+     * account
+     * the setting that allowed it
+     * use number
+     * application id and location
+     * installer
+     * SHA-1
+     * evidence record
+     * notes
+3. **Applications.** One card per app: services used, use count, total time, first and last use, location prompts, and blocked count.
+4. **Services.** For every service, which apps used it, how often and when.
+5. **Permissions.** The current Allow / Deny / Prompt per app and service, and which level decided it (App setting, Desktop-apps switch, User default, System default). Flags: *Used while now Deny* and *Never used*.
+6. **Desktop programs.** Path, SHA-1, first seen, location prompts and installer, with a flag for Temp, Downloads or another drive.
+7. **Recovered.** Deleted rows and WAL-slack transactions.
+8. **Findings.** Consistency, retention and integrity checks.
+9. **Technical.** Evidence hashes, method, and a link to the technical report.
+
+Each timeline row's **Source** says where it came from:
+
+| Source | Meaning |
+|---|---|
+| Database | A live row in the .db |
+| Database (WAL, not yet in .db) | Exists only in the -wal file |
+| Recovered (deleted) | Carved from free space or pages past the end of the file |
+| Recovered (WAL slack) | A committed transaction found past the WAL's end |
+| Registry (last use) | Only in NTUSER.DAT |
+| Database + Registry | The same event is in both |
+| Location prompt | From NonPackagedGlobalPromptHistory |
+
+Two kinds of value are derived and labelled as such:
+* **Store-app folders** are derived from the package name, marked `(derived)`, because CAM stores only the package name.
+* **Location prompts whose path was purged** are linked to a path only when exactly one known path shares their ProgramID or file name. The note says so. Otherwise the app is shown as `unknown program (SHA-1 …)`.
 
 ### Recovered-record status
 | Status | Meaning |
@@ -155,7 +206,9 @@ Optional environment variables:
 | `CAMTOOL_STRESS=big` | 1M rows / 20,000 transactions |
 
 ## 5. Limitations
-* Amcache.hve and NTUSER.DAT are not parsed natively. Use an AmcacheParser CSV and a `.reg` export.
+* Registry transaction logs (.LOG1/.LOG2) are not replayed, so a dirty hive shows its last flushed state. Amcache.hve is not parsed natively; use an AmcacheParser CSV.
+* Windows records the **account** for each use, not which person clicked "Allow". The consent databases hold the *current* setting, not a history of changes.
+* After a purge, lookup IDs can be reused. A recovered row whose application identity was purged is therefore never named from another (possibly reused) ID.
 * Inputs are loaded into memory, which is comfortable up to a few hundred MB per file.
 * Meanings of `Label`, `Context` and `AccessGUID` are unknown and reported raw.
 

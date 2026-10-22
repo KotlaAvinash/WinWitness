@@ -101,6 +101,14 @@ class TestActivity(unittest.TestCase):
         self.assertEqual([r["source"] for r in a], ["Recovered (deleted)", "Recovered (WAL slack)"])
         self.assertEqual(a[1]["app"], "unknown app (purged, ID 28)")
 
+    def test_recovered_row_with_purged_package_not_named_from_reused_appname(self):
+        c = cam([], carved=[usage(7, ft(1), ft(2), "contacts", "<unresolved PackageFamilyNames ID 29: purged>",
+                                  app_name="Brave Browser", source="carved", status="DELETED")])
+        a = V.build_activity(c, [], None, {}, IST)
+        self.assertEqual(a[0]["app"], "unknown app (purged, ID 29)")
+        self.assertIn("Brave Browser", a[0]["note"])
+        self.assertIn("reused", a[0]["note"])
+
     def test_db_and_registry_same_event_merged(self):
         c = cam([usage(1, ft(100), ft(160), "webcam", "Contoso.Cam_abcdefghijklm")])
         reg = dict(source="hive", entries=[
