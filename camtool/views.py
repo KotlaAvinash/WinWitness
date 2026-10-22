@@ -93,7 +93,9 @@ ACCESS_NOT_RECORDED = "Not recorded"
 INSTALLER_NONE = "not recorded in CAM (add the SOFTWARE hive)"
 SOURCE_DB, SOURCE_WAL = "Database", "Database (WAL, not yet in .db)"
 SOURCE_DEL, SOURCE_SLACK = "Recovered (deleted)", "Recovered (WAL slack)"
-SOURCE_REG, SOURCE_BOTH, SOURCE_PROMPT = "Registry (last use)", "Database + Registry", "Location prompt"
+SOURCE_REG, SOURCE_BOTH, SOURCE_PROMPT = "Registry (last use)", "Database + Registry", "Prompt history (database)"
+ACCESS_PROMPT = "Permission prompt shown"
+ALL_APPS = "All apps (global setting)"
 
 
 # --------------------------------------------------------------------------- labels
@@ -396,7 +398,7 @@ def build_activity(cam: dict, wal_changes: list, reg: dict | None, names: dict, 
             elif p.get("sha1"):
                 app, note = "sha1:" + p["sha1"], "path purged; look up this SHA-1 in Amcache"
         r = base(app, "nonpackaged", p.get("capability", "location"), p.get("user_sid", ""), start, 0,
-                 "Prompt shown", SOURCE_PROMPT, f"NonPackagedGlobalPromptHistory ID {p['ID']}", p.get("sha1", ""),
+                 ACCESS_PROMPT, SOURCE_PROMPT, f"NonPackagedGlobalPromptHistory ID {p['ID']}", p.get("sha1", ""),
                  event="prompt")
         if app.startswith("sha1:"):
             r["app_location"] = ""
@@ -499,7 +501,7 @@ def permission_view(consent: dict | None, reg: dict | None, activity: list[dict]
                 flag = "Used while now Deny"
             elif not u:
                 flag = "Never used"
-        out.append(dict(app=app_label(app_id) if app_id else "(all apps)", app_id=app_id, feature=feature_label(cap),
+        out.append(dict(app=app_label(app_id) if app_id else ALL_APPS, app_id=app_id, feature=feature_label(cap),
                         feature_id=cap, setting=setting, scope=scope, user=user_label(sid, names) if sid else "",
                         used_count=len(u), last_used_local=max((x["when_local"] for x in u), default=""), flag=flag))
     c = consent or {}

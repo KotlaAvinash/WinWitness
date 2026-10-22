@@ -147,7 +147,7 @@ Each timeline row's **Source** says where it came from:
 | Recovered (WAL slack) | A committed transaction found past the WAL's end |
 | Registry (last use) | Only in NTUSER.DAT |
 | Database + Registry | The same event is in both |
-| Location prompt | From NonPackagedGlobalPromptHistory |
+| Prompt history (database) | From NonPackagedGlobalPromptHistory: Windows showed this desktop program a consent prompt ("Permission prompt shown"). Whether the user then allowed it is not stored in that table |
 
 Two kinds of value are derived and labelled as such:
 * **Store-app folders** are derived from the package name, marked `(derived)`, because CAM stores only the package name.

@@ -72,7 +72,7 @@ background:var(--surface-2);border-radius:20px;padding:1px 9px}
 .lead{color:var(--text-2);margin:0 0 14px;max-width:880px}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
 .hero{padding:22px 24px;display:grid;gap:16px;background:linear-gradient(135deg,var(--accent-soft),var(--surface) 55%)}
-.hero h1{margin:0;font-size:24px;letter-spacing:-.2px}
+.hero>*{min-width:0}.meta span{overflow-wrap:anywhere;min-width:0}.hero h1{margin:0;font-size:24px;letter-spacing:-.2px}
 .hero p{margin:0;color:var(--text-2);font-size:15px;max-width:980px}
 .meta{display:flex;flex-wrap:wrap;gap:6px 16px;color:var(--muted);font-size:12.5px}
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:10px}
@@ -100,28 +100,32 @@ background:var(--surface-2);border-radius:20px;padding:1px 9px}
 .tip{position:fixed;pointer-events:none;background:var(--text);color:var(--bg);font-size:12px;padding:6px 9px;border-radius:7px;z-index:50;display:none;max-width:280px}
 .day{margin:16px 0 6px;display:flex;align-items:baseline;gap:10px;position:sticky;top:53px;z-index:5;background:var(--bg);padding:4px 0}
 .day b{font-size:14px}.day span{color:var(--muted);font-size:12px}
-.ev{display:grid;grid-template-columns:150px 1.4fr 1.1fr 110px 1fr 140px;gap:10px;align-items:center;padding:9px 14px;
+.ev{display:grid;grid-template-columns:150px minmax(0,2fr) minmax(0,1.1fr) 150px minmax(0,1.3fr) 160px 18px;gap:10px;align-items:center;padding:9px 14px;
 border:1px solid var(--line);background:var(--surface);border-radius:11px;margin-bottom:5px;cursor:pointer}
 .ev:hover{border-color:var(--accent)}.ev>*{min-width:0}.ev .badge{white-space:normal}
-@media (max-width:980px){.ev{grid-template-columns:1fr 1fr}}
+.evh{display:grid;grid-template-columns:150px minmax(0,2fr) minmax(0,1.1fr) 150px minmax(0,1.3fr) 160px 18px;gap:10px;padding:2px 15px 6px;font-size:11px;font-weight:600;letter-spacing:.3px;text-transform:uppercase;color:var(--muted)}
+@media (max-width:980px){.ev{grid-template-columns:1fr 1fr}.evh,.ev .chev{display:none}}
+.ev .t .tz{font-size:10.5px;font-weight:600;color:var(--accent);margin-left:4px}
+.chev{color:var(--muted);font-size:18px;transition:transform .15s;text-align:center}.ev.open .chev{transform:rotate(90deg)}
+.howto{padding:12px 16px;margin-bottom:12px}.howto summary{cursor:pointer;font-weight:600}.howto dl{display:grid;grid-template-columns:minmax(0,170px) minmax(0,1fr);gap:6px 16px;margin:10px 0 0;font-size:13px}@media (max-width:640px){.howto dl{grid-template-columns:minmax(0,1fr)}.howto dd{margin-bottom:6px}}.howto dd{overflow-wrap:anywhere}.howto dt{font-weight:600}.howto dd{margin:0;color:var(--text-2)}
 .ev .t{font-variant-numeric:tabular-nums;font-weight:600}.ev .t small{display:block;font-weight:400;color:var(--muted)}
 .app{display:flex;gap:9px;align-items:center;min-width:0}.app .av{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;
 font-weight:700;font-size:13px;color:var(--text);background:var(--surface-2);flex:none}
-.app .nm{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.app small{display:block;color:var(--muted);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app .nm{font-weight:600;overflow-wrap:anywhere}.app small{display:block;color:var(--muted);font-size:11.5px;overflow-wrap:anywhere}
 .svcb{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;padding:3px 9px 3px 4px;border-radius:20px;background:var(--surface-2)}
 .svcb .ic{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;color:#fff}.svcb svg.i{width:12px;height:12px}
 .badge{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:2px 9px;border-radius:20px;white-space:nowrap}
 .b-ok{background:var(--ok-soft);color:var(--ok)}.b-bad{background:var(--bad-soft);color:var(--bad)}.b-warn{background:var(--warn-soft);color:var(--warn)}
 .b-info{background:var(--info-soft);color:var(--text-2)}.b-acc{background:var(--accent-soft);color:var(--accent)}
-.who{font-size:12.5px;color:var(--text-2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.who{font-size:12px;color:var(--text-2);min-width:0;overflow-wrap:anywhere}
 .detail{grid-column:1/-1;border-top:1px dashed var(--line);margin-top:6px;padding-top:9px;display:none;cursor:auto}
 .ev.open .detail{display:block}.detail p{margin:0 0 8px;font-size:14px}
 .kv{display:grid;grid-template-columns:170px 1fr;gap:4px 14px;font-size:12.5px}.kv dt{color:var(--muted)}.kv dd{margin:0;word-break:break-all}
 .more{display:block;margin:12px auto 0}
 .appgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:10px}
-.appcard{padding:14px 16px;cursor:pointer;display:grid;gap:8px}.appcard .top2{display:flex;gap:10px;align-items:center}
-.appcard h4{margin:0;font-size:15px}.appcard .path{font-size:11.5px;color:var(--muted);word-break:break-all}
-.stats{display:grid;grid-template-columns:repeat(4,auto);justify-content:start;gap:16px;font-size:12px;color:var(--muted)}.stats b{display:block;color:var(--text);font-size:15px;white-space:nowrap}
+.appcard{padding:14px 16px;cursor:pointer;display:grid;gap:8px;min-width:0;overflow:hidden}.appcard>*{min-width:0}.appcard .top2{display:flex;gap:10px;align-items:center}
+.appcard h4{margin:0;font-size:15px;overflow-wrap:anywhere}.appcard .path{font-size:11.5px;color:var(--muted);overflow-wrap:anywhere}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(86px,1fr));gap:8px 14px;font-size:12px;color:var(--muted)}.stats>div{min-width:0}.stats b{display:block;color:var(--text);font-size:14px;overflow-wrap:anywhere}
 .chips{display:flex;flex-wrap:wrap;gap:5px}
 .tw{overflow:auto;max-height:620px;border-radius:12px}
 table{border-collapse:collapse;width:100%;font-size:12.5px}th{position:sticky;top:0;background:var(--surface-2);text-align:left;
@@ -145,10 +149,13 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const ICON=k=>`<svg class="i" viewBox="0 0 24 24"><use href="#ic-${D.icons[k]?k:'dot'}"/></svg>`;
 const svcSlot=f=>D.serviceSlot[f]||0, svcIcon=f=>D.serviceIcon[f]||'dot';
 const svcBadge=f=>`<span class="svcb"><span class="ic" style="background:var(--s${svcSlot(f)})">${ICON(svcIcon(f))}</span>${esc(f)}</span>`;
-const accBadge=a=>a==='Allowed'?`<span class="badge b-ok">● Allowed</span>`:a==='Blocked'?`<span class="badge b-bad">✕ Blocked</span>`:`<span class="badge b-warn">? ${esc(a)}</span>`;
-const srcBadge=s=>{const c=s.startsWith('Recovered')?'b-warn':s.includes('WAL')?'b-acc':s.startsWith('Registry')||s.includes('+')?'b-acc':'b-info';return `<span class="badge ${c}">${esc(s)}</span>`};
+const RES_EXPL={'Allowed':'Windows let the app use the service','Blocked':'Windows refused the app access to the service','Permission prompt shown':'Windows showed this program the consent prompt for the service ("let this app use your location?"). Whether the user then allowed it is not stored in this table.','Not recorded':'The registry only keeps the time of the last use; it does not record whether access was allowed'};
+const accBadge=a=>{const t=esc(RES_EXPL[a]||'');return a==='Allowed'?`<span class="badge b-ok" title="${t}">● Allowed</span>`:a==='Blocked'?`<span class="badge b-bad" title="${t}">✕ Blocked</span>`:a==='Permission prompt shown'?`<span class="badge b-warn" title="${t}">⚑ Permission prompt shown</span>`:`<span class="badge b-info" title="${t}">${esc(a)}</span>`};
+const SRC_EXPL={'Database':'Live row in CapabilityAccessManager.db','Database (WAL, not yet in .db)':'Row only in the -wal file: committed by Windows but not yet written into the .db file','Recovered (deleted)':'Deleted row recovered (carved) from free space or old pages of the .db file','Recovered (WAL slack)':'Committed transaction found past the logical end of the -wal file','Registry (last use)':'Last-use time kept in the ConsentStore registry key (NTUSER.DAT / SOFTWARE hive)','Prompt history (database)':'Row in the NonPackagedGlobalPromptHistory table: Windows showed a consent prompt for this program'};
+const srcExpl=s=>s.split(' + ').map(x=>SRC_EXPL[x]||SRC_EXPL[x+' (last use)']||x).join('; also: ');
+const srcBadge=s=>{const c=s.startsWith('Recovered')?'b-warn':s.includes('WAL')?'b-acc':s.startsWith('Registry')||s.includes('+')?'b-acc':'b-info';return `<span class="badge ${c}" title="${esc(srcExpl(s))}">${esc(s)}</span>`};
 const T=r=>(r.when_local||r.when_utc||'');
-const who=u=>{u=String(u||'');const m=u.match(/^(.*?)\(?(S-1-5-21-[\d-]+?-(\d+))\)?$/);return m?`<span title="${esc(u)}">${esc((m[1].trim()?m[1].trim()+' ':'')+'…-'+m[3])}</span>`:esc(u||'—')};
+const who=u=>esc(u||'—');
 const hm=s=>s?s.slice(11,19):'';
 /* ---------- theme ---------- */
 try{const t=localStorage.getItem('cam-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}
@@ -175,22 +182,22 @@ function dayLabel(d){if(!d)return 'Date not recorded';const x=new Date(d+'T00:00
 function sentence(r){if(r.event==='prompt')return `Windows asked for <b>${esc(r.feature)}</b> permission for <b>${esc(r.app)}</b>.`;
 return `<b>${esc(r.app)}</b> used <b>${esc(r.feature)}</b> ${r.duration_text==='end not recorded'?'(end time not recorded)':r.duration_text&&r.duration_text!=='instant'?'for <b>'+esc(r.duration_text)+'</b>':r.duration_text==='instant'?'(instant access)':''} — <b>${esc(r.access.toLowerCase())}</b>${r.user?' under account '+esc(r.user):''}.`}
 function row(r,i){const loc=r.app_location||r.app_id;return `<div class="ev" data-i="${i}">
-<div class="t">${esc(hm(T(r)))}${r.end_local||r.end_utc?' → '+esc(hm(r.end_local||r.end_utc)):''}<small>${r.event==='use'?esc(r.duration_text||''):'prompt'}${r.use_no?' · '+esc(r.use_no):''}</small></div>
+<div class="t">${T(r)?esc(hm(T(r))):'no time'}${r.end_local||r.end_utc?' → '+esc(hm(r.end_local||r.end_utc)):''}${T(r)?`<span class="tz">${esc(D.tz)}</span>`:''}${r.when_utc?`<small>UTC ${esc(hm(r.when_utc))}${r.end_utc?' → '+esc(hm(r.end_utc)):''}</small>`:''}<small>${r.event==='use'?esc(r.duration_text||''):'permission prompt'}${r.use_no?' · '+esc(r.use_no):''}</small></div>
 <div class="app"><span class="av" style="box-shadow:inset 0 0 0 2px var(--s${svcSlot(r.feature)})">${esc((r.app||'?').replace(/^unknown /,'?').slice(0,1).toUpperCase())}</span>
-<div style="min-width:0"><div class="nm" title="${esc(r.app)}">${esc(r.app)}</div><small title="${esc(loc)}">${esc(r.app_kind)}${loc?' · '+esc(loc):''}</small></div></div>
-<div>${svcBadge(r.feature)}</div><div>${accBadge(r.access)}</div><div class="who">${who(r.user)}</div><div>${srcBadge(r.source)}</div>
+<div style="min-width:0"><div class="nm">${esc(r.app)}</div><small>${esc(r.app_kind)}${loc?' · '+esc(loc):''}</small></div></div>
+<div>${svcBadge(r.feature)}</div><div>${accBadge(r.access)}</div><div class="who">${who(r.user)}</div><div>${srcBadge(r.source)}</div><div class="chev" title="Show full record">›</div>
 <div class="detail"><p>${sentence(r)}</p><dl class="kv">
 <dt>Service</dt><dd>${esc(r.feature)}${r.service_desc?' — '+esc(r.service_desc):''}</dd>
 <dt>Start / end (local)</dt><dd>${esc(r.when_local)}${r.end_local?' → '+esc(r.end_local):''}</dd>
 <dt>Start / end (UTC)</dt><dd>${esc(r.when_utc)}${r.end_utc?' → '+esc(r.end_utc):''}</dd>
-<dt>Duration</dt><dd>${esc(r.duration_text||'—')}</dd><dt>Account</dt><dd>${esc(r.user||'—')}</dd>
+<dt>Duration</dt><dd>${esc(r.duration_text||'—')}</dd><dt>Result</dt><dd>${esc(r.access)} — ${esc(RES_EXPL[r.access]||'')}</dd><dt>Recorded in</dt><dd>${esc(r.source)} — ${esc(srcExpl(r.source))}</dd><dt>Account</dt><dd>${esc(r.user||'—')}</dd>
 <dt>Setting (current)</dt><dd>${esc(r.allowed_by||'—')}</dd><dt>Use number</dt><dd>${esc(r.use_no||'—')}</dd>
 <dt>Application id</dt><dd class="mono">${esc(r.app_id)}</dd><dt>Application location</dt><dd class="mono">${esc(r.app_location||'—')}</dd>
 <dt>Installer</dt><dd>${esc(r.installer||'—')}</dd>${r.sha1?`<dt>SHA-1</dt><dd class="mono">${esc(r.sha1)}</dd>`:''}
 <dt>Evidence record</dt><dd>${esc(r.ref)} · ${esc(r.source)}</dd>${r.note?`<dt>Note</dt><dd>${esc(r.note)}</dd>`:''}</dl></div></div>`}
 function renderTimeline(){const box=$('#timeline');if(!cur.length){box.innerHTML='<div class="card empty">No activity matches these filters.</div>';$('#more').style.display='none';return}
 const part=cur.slice(0,shownN);let h='',last=null,perDay={};cur.forEach(r=>perDay[r.date]=(perDay[r.date]||0)+1);
-part.forEach((r,i)=>{if(r.date!==last){last=r.date;h+=`<div class="day"><b>${esc(dayLabel(r.date))}</b><span>${perDay[r.date]} event${perDay[r.date]>1?'s':''}</span></div>`}h+=row(r,i)});
+h+=`<div class="evh"><div>Time (${esc(D.tz)})</div><div>Application · location</div><div>Service</div><div>Result</div><div>Account (user SID)</div><div>Recorded in</div><div></div></div>`;part.forEach((r,i)=>{if(r.date!==last){last=r.date;h+=`<div class="day"><b>${esc(dayLabel(r.date))}</b><span>${perDay[r.date]} event${perDay[r.date]>1?'s':''}</span></div>`}h+=row(r,i)});
 box.innerHTML=h;$('#more').style.display=cur.length>shownN?'block':'none';$('#more').textContent=`Show ${Math.min(PAGE,cur.length-shownN)} more (${cur.length-shownN} hidden)`}
 $('#timeline').addEventListener('click',e=>{const ev=e.target.closest('.ev');if(ev&&!e.target.closest('.detail'))ev.classList.toggle('open')});
 $('#more').onclick=()=>{shownN+=PAGE;renderTimeline()};
@@ -252,7 +259,7 @@ def write_html_v2(path: str, ctx: dict) -> None:
     s = ctx["summary"]
     act = ctx["activity"]
     uses = [r for r in act if r.get("event") == "use"]
-    data = dict(activity=act, apps=ctx["apps"], features=ctx["features"], permissions=ctx["permissions"],
+    data = dict(tz=f"UTC{ctx['tz_label']}", activity=act, apps=ctx["apps"], features=ctx["features"], permissions=ctx["permissions"],
                 programs=ctx["programs"], findings=ctx["findings"], serviceSlot=dict(SERVICE_SLOT),
                 serviceIcon={v[0]: v[2] for v in SERVICES.values()}, icons={k: 1 for k in ICONS})
     # every '<' is escaped so no evidence string can open or close a tag (incl. the '<!--<script>' state)
@@ -291,12 +298,12 @@ record: service meaning, start/end in local and UTC, account, the setting that a
 <label><input type="checkbox" id="f-pr" checked> include location prompts</label><button class="btn" id="f-reset">Reset</button><span class="shown" id="shown"></span></div>
 <div class="charts"><div class="card chart"><h3>Uses per day</h3><div class="sub">stacked by service · follows the filters</div><div id="c-day"></div><div class="legend" id="l-day"></div></div>
 <div class="card chart"><h3>Time of day</h3><div class="sub">uses by local hour</div><div id="c-hour"></div></div></div>
-<div id="timeline"></div><button class="btn primary more" id="more">Show more</button></section>
+<details class="card howto" open><summary>How to read a timeline row</summary><dl><dt>Time</dt><dd>Start → end in local time <b>UTC{_esc(ctx['tz_label'])}</b> (shown next to the time). The line below gives the same time in <b>UTC</b>; then the duration and the use number (e.g. #3 of 12 = the 3rd of 12 recorded uses of this service by this app).</dd><dt>Application · location</dt><dd>The program and where it lives: the full .exe path for desktop programs, or the package folder for packaged (MSIX) apps, marked <i>(derived)</i> because the database stores only the package name.</dd><dt>Service</dt><dd>The protected feature used: Camera, Microphone, Location, Contacts, Screen capture, Passkeys…</dd><dt>Result</dt><dd><b>Allowed</b> / <b>Blocked</b>: what Windows did for this use. <b>Permission prompt shown</b>: Windows asked the user whether this program may use the service (consent prompt); the answer is not stored in that table. <b>Not recorded</b>: registry last-use entries do not say whether access was allowed.</dd><dt>Account</dt><dd>The Windows user account (SID) the app ran under. A name is added when the SOFTWARE hive is supplied.</dd><dt>Recorded in</dt><dd><b>Database</b> = live row in CapabilityAccessManager.db · <b>Database (WAL…)</b> = only in the -wal file, not yet saved into the .db · <b>Recovered (deleted)</b> = deleted row carved from free space · <b>Recovered (WAL slack)</b> = transaction found past the end of the -wal file · <b>Registry (last use)</b> = ConsentStore registry key · <b>Prompt history (database)</b> = the table of consent prompts Windows showed to desktop programs.</dd><dt>Details</dt><dd>Click any row (›) for the full record: dates in local and UTC, setting, installer, SHA-1 and the evidence record.</dd></dl></details><div id="timeline"></div><button class="btn primary more" id="more">Show more</button></section>
 <section id="apps"><h2>{icon('app')}Applications <span class="count">{len([a for a in ctx['apps'] if a.get('uses') or a.get('prompts')])}</span></h2>
 <p class="lead">One card per application: services it used, how often, total time, first and last use. Click a card to filter the timeline.</p><div class="appgrid" id="appgrid"></div></section>
 <section id="features"><h2>{icon('shield')}Services</h2><p class="lead">Which application used each service, how many times and when.</p><div id="t-features"></div></section>
 <section id="permissions"><h2>{icon('check')}Permissions</h2><p class="lead">Current Allow / Deny / Prompt settings from CapabilityConsentStorage.db
-(and the registry when a hive is supplied), set against actual use. <b>Used while now Deny</b> (counted on allowed uses only) suggests the setting was changed after the app used the service.</p><div id="t-perm"></div></section>
+(and the registry when a hive is supplied), set against actual use. Rows named <b>All apps (global setting)</b> are switches that apply to every app for that service: <b>System default</b> (whole machine), <b>User default</b> (one account) and <b>Desktop-apps switch</b> ("Let desktop apps access…", one account). A Deny there blocks every app regardless of its own setting. <b>Used while now Deny</b> (counted on allowed uses only) suggests the setting was changed after the app used the service.</p><div id="t-perm"></div></section>
 <section id="programs"><h2>{icon('file')}Desktop programs</h2><p class="lead">Every desktop program Windows recorded, with its path, SHA-1 (as in Amcache), first-seen time, and
 whether it ran from an unusual place.</p><div id="t-prog"></div></section>
 <section id="recovered"><h2>{icon('restore')}Recovered records <span class="count" id="rec-n"></span></h2><p class="lead">Rows no longer in the live database:

@@ -128,7 +128,8 @@ class TestActivity(unittest.TestCase):
         c = cam(prompts=[dict(ID=1, shown_utc=M.ft_str(ft(10)), shown_local=M.ft_str(ft(10), IST), capability="location",
                               binary=BRAVE, binary_name="", sha1="ab" * 20, user_sid=SID, raw={})])
         a = V.build_activity(c, [], None, {}, IST)
-        self.assertEqual((a[0]["event"], a[0]["access"], a[0]["source"]), ("prompt", "Prompt shown", "Location prompt"))
+        self.assertEqual((a[0]["event"], a[0]["access"], a[0]["source"]),
+                         ("prompt", "Permission prompt shown", "Prompt history (database)"))
 
     def test_prompt_path_linked_by_programid_or_name(self):
         ident = [dict(ID=1, binary=BRAVE, sha1="aa" * 20, program_id="0006pp", first_observed_utc="", raw={}),
@@ -220,6 +221,11 @@ class TestOtherViews(unittest.TestCase):
                                 Value_meaning="Allow")]}
         p = V.permission_view(consent, None, self.a, {})
         self.assertEqual([r["scope"] for r in p], ["App setting", "User default", "System default"])
+
+    def test_global_rows_labelled_all_apps_global(self):
+        consent = {"SystemGlobal": [dict(Capability="webcam", Value=1, Value_meaning="Allow")]}
+        p = V.permission_view(consent, None, self.a, {})
+        self.assertEqual(p[0]["app"], "All apps (global setting)")
 
     def test_views_without_consent_or_registry(self):
         self.assertEqual(V.permission_view(None, None, self.a, {}), [{"note": "no consent data"}])
