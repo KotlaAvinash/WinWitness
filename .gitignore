@@ -8,3 +8,4 @@ camtool_output_*/
 *.FileSlack
 $I30
 *.sqlite
+.superpowers/
