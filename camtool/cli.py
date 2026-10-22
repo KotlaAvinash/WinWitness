@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import ntpath
 import os
 import shutil
 import sys
@@ -160,23 +161,62 @@ def run(a, tz) -> int:
             cam_sid = sorted(cam["lookups"]["Users"].values())[0]
 
         corr = []
-        reg = None
+        # ---- optional registry sources: offline hives in the evidence folder, then --registry
+        from .regf import Hive, RegfError
+        software = None
+        if "SOFTWARE" in files:
+            try:
+                software = X.read_software_hive(Hive(files["SOFTWARE"].data))
+                log(f"SOFTWARE hive: {len(software['profiles'])} profiles, {len(software['uninstall'])} installed "
+                    f"programs, OS {software['os'].get('product')} {software['os'].get('display_version')} "
+                    f"build {software['os'].get('build')}")
+                if software["usage_history_settings"]:
+                    corr.append(("CapabilityUsageHistory settings (SOFTWARE hive)", [software["usage_history_settings"]]))
+            except RegfError as ex:
+                log(f"SOFTWARE: skipped ({ex})")
+                software = None
+        reg_sources = []
+        for role in sorted(k for k in files if k.startswith("NTUSER.DAT:")):
+            try:
+                r = X.read_hive_consentstore(Hive(files[role].data), role)
+            except RegfError as ex:
+                log(f"{role}: skipped ({ex})")
+                continue
+            parent = os.path.basename(os.path.dirname(files[role].path)).lower()
+            for sid, prof in (software or {}).get("profiles", {}).items():
+                if parent and ntpath.basename(prof.rstrip("\\/")).lower() == parent:
+                    r["sid"] = sid
+            for e in r["entries"]:
+                e["sid"] = r["sid"]
+            log(f"{role}: {len(r['entries'])} ConsentStore keys (account {r['sid'] or 'not identified'})")
+            reg_sources.append(r)
+        if software and software["consent_entries"]:
+            reg_sources.append(dict(source="offline hive SOFTWARE", sid=None, entries=software["consent_entries"]))
         if a.registry:
             try:
-                reg = X.read_live_registry() if a.registry.lower() == "live" else X.parse_reg_export(a.registry)
-                rc = X.compare_registry(reg, consent, cam, cam_sid)
-                s = rc["summary"]
-                log(f"registry: {len(reg['entries'])} keys from {reg['source']}; same user as evidence={rc['same_user']}; "
-                    f"Value matches {s['value_matches']}/{s['value_pairs']}; registry newer than DB {s['registry_newer']}/{s['time_pairs']}")
-                corr.append((f"ConsentStore registry vs consent DB ({reg['source']}; registry SID {rc['sid']}; "
-                             f"same user as evidence: {rc['same_user']})", rc["value_checks"]))
-                corr.append(("Registry last-use (current event) vs newest DB row for the same app/capability", rc["time_checks"]))
-                corr.append(("Registry summary", [rc["summary"]]))
-                if reg.get("usage_history_settings"):
-                    corr.append(("CapabilityUsageHistory settings (HKLM; DatabaseRoot / retention)",
-                                 [reg["usage_history_settings"]]))
+                reg_sources.append(X.read_live_registry() if a.registry.lower() == "live"
+                                   else X.parse_reg_export(a.registry))
             except Exception as ex:
-                log(f"registry corroboration failed: {type(ex).__name__}: {ex}")
+                log(f"registry input failed: {type(ex).__name__}: {ex}")
+        reg = None
+        if reg_sources:
+            reg = dict(source=" + ".join(r["source"] for r in reg_sources),
+                       sid=next((r["sid"] for r in reg_sources if r.get("sid")), None),
+                       entries=[e for r in reg_sources for e in r["entries"]],
+                       usage_history_settings=next((r.get("usage_history_settings") for r in reg_sources
+                                                    if r.get("usage_history_settings")), None))
+            for r in reg_sources:
+                rc = X.compare_registry(r, consent, cam, cam_sid)
+                s_ = rc["summary"]
+                log(f"registry: {len(r['entries'])} keys from {r['source']}; same user as evidence={rc['same_user']}; "
+                    f"Value matches {s_['value_matches']}/{s_['value_pairs']}; registry newer than DB "
+                    f"{s_['registry_newer']}/{s_['time_pairs']}")
+                corr.append((f"ConsentStore registry vs consent DB ({r['source']}; registry SID {rc['sid']}; "
+                             f"same user as evidence: {rc['same_user']})", rc["value_checks"]))
+                corr.append((f"Registry last-use vs newest DB row ({r['source']})", rc["time_checks"]))
+                if r.get("usage_history_settings"):
+                    corr.append(("CapabilityUsageHistory settings (HKLM; DatabaseRoot / retention)",
+                                 [r["usage_history_settings"]]))
         if a.hash_binaries and cam:
             pm = [tuple(x.split("=", 1)) for x in a.path_map if "=" in x]
             hb = X.hash_binaries(cam, pm)

@@ -82,6 +82,11 @@ def discover(folder: str) -> dict[str, str]:
                     roles.setdefault(base + role, p)
         if n == "$i30" or n.endswith("$i30") or n.endswith(".i30"):
             roles.setdefault("$I30", p)
+        # optional registry hives (used only when present)
+        if n == "ntuser.dat":
+            roles.setdefault("NTUSER.DAT:" + os.path.relpath(p, folder), p)
+        if n == "software":
+            roles.setdefault("SOFTWARE", p)
     return roles
 
 

@@ -481,6 +481,70 @@ def _walk_apps(ck, cap, hname, prefix, out):
             out.append(dict(hive=hname, capability=cap, app=name, nonpackaged=bool(prefix), **_vals(ak)))
 
 
+CS_USER = r"Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore"
+CS_MACHINE = r"Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore"
+
+
+def _hive_consent_entries(cs_key, hive_label: str) -> list[dict]:
+    """Walk a ConsentStore key of an offline hive into read_live_registry()-shaped entries."""
+    out = []
+    if cs_key is None:
+        return out
+    for cap in cs_key.subkeys():
+        out.append(dict(hive=hive_label, capability=cap.name, app="(global)", nonpackaged=False,
+                        key_last_write=cap.last_write, **cap.values()))
+        for app in cap.subkeys():
+            if app.name == "NonPackaged":
+                out.append(dict(hive=hive_label, capability=cap.name, app="NonPackaged (default)",
+                                nonpackaged=False, key_last_write=app.last_write, **app.values()))
+                for np_ in app.subkeys():
+                    out.append(dict(hive=hive_label, capability=cap.name, app=np_.name.replace("#", "\\"),
+                                    nonpackaged=True, key_last_write=np_.last_write, **np_.values()))
+            else:
+                out.append(dict(hive=hive_label, capability=cap.name, app=app.name, nonpackaged=False,
+                                key_last_write=app.last_write, **app.values()))
+    return out
+
+
+def read_hive_consentstore(hive, label: str) -> dict:
+    """ConsentStore (per-user decisions + last-use times) from an offline NTUSER.DAT."""
+    return dict(source=f"offline hive {label}", sid=None,
+                entries=_hive_consent_entries(hive.key(CS_USER), f"HKCU({label})"))
+
+
+def read_software_hive(hive) -> dict:
+    """OS version, ProfileList (SID -> profile path), CAM settings, HKLM ConsentStore, Uninstall entries."""
+    cv = hive.key(r"Microsoft\Windows NT\CurrentVersion")
+    v = cv.values() if cv else {}
+    os_info = dict(product=v.get("ProductName", ""), display_version=v.get("DisplayVersion", ""),
+                   build=str(v.get("CurrentBuild", "")), ubr=v.get("UBR", ""),
+                   registered_owner=v.get("RegisteredOwner", ""))
+    profiles = {}
+    pl = hive.key(r"Microsoft\Windows NT\CurrentVersion\ProfileList")
+    for k in pl.subkeys() if pl else []:
+        path = k.values().get("ProfileImagePath")
+        if isinstance(path, str):
+            profiles[k.name] = path
+    uh = hive.key(r"Microsoft\Windows\CurrentVersion\CapabilityAccessManager\CapabilityUsageHistory")
+    uninstall = []
+    for base in (r"Microsoft\Windows\CurrentVersion\Uninstall",
+                 r"WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"):
+        u = hive.key(base)
+        for k in u.subkeys() if u else []:
+            x = k.values()
+            name = x.get("DisplayName")
+            if not isinstance(name, str) or not name:
+                continue
+            uninstall.append(dict(name=name, key=k.name, install_location=x.get("InstallLocation", "") or "",
+                                  install_source=x.get("InstallSource", "") or "",
+                                  display_icon=x.get("DisplayIcon", "") or "",
+                                  uninstall_string=x.get("UninstallString", "") or "",
+                                  publisher=x.get("Publisher", "") or "", version=x.get("DisplayVersion", "") or "",
+                                  install_date=x.get("InstallDate", "") or "", key_last_write=k.last_write_utc))
+    return dict(os=os_info, profiles=profiles, usage_history_settings=uh.values() if uh else {},
+                uninstall=uninstall, consent_entries=_hive_consent_entries(hive.key(CS_MACHINE), "HKLM(SOFTWARE)"))
+
+
 def parse_reg_export(path: str) -> dict:
     """Parse a regedit .reg export (UTF-16 or UTF-8) of a ConsentStore key (any hive)."""
     raw = open(path, "rb").read()
