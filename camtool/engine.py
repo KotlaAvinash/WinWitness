@@ -16,7 +16,7 @@ from .sqlite_low import (BTreeReader, FormatError, PageImage, page_free_regions,
                          parse_shm, parse_wal, BTREE_TYPES)
 
 TOOL_NAME = "CAMtool"
-TOOL_VERSION = "1.0.0"
+TOOL_VERSION = "2.0.0"
 
 
 # --------------------------------------------------------------------------- evidence intake

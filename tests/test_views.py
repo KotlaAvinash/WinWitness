@@ -205,6 +205,14 @@ class TestOtherViews(unittest.TestCase):
         self.assertEqual(p[("Contoso.Cam_abcdefghijklm", "webcam")]["flag"], "Used while now Deny")
         self.assertEqual(p[("Never.Used_abcdefghijklm", "microphone")]["flag"], "Never used")
 
+    def test_permission_order_app_rows_before_global(self):
+        consent = {"SystemGlobal": [dict(Capability="webcam", Value=1, Value_meaning="Allow")],
+                   "UserGlobal": [dict(Capability="webcam", User=SID, Value=1, Value_meaning="Allow")],
+                   "App": [dict(Capability="webcam", User=SID, PackageFamily="Contoso.Cam_abcdefghijklm", Value=1,
+                                Value_meaning="Allow")]}
+        p = V.permission_view(consent, None, self.a, {})
+        self.assertEqual([r["scope"] for r in p], ["App setting", "User default", "System default"])
+
     def test_views_without_consent_or_registry(self):
         self.assertEqual(V.permission_view(None, None, self.a, {}), [{"note": "no consent data"}])
         self.assertTrue(V.app_summary(self.a))

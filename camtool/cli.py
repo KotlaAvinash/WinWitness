@@ -16,6 +16,8 @@ from . import corroborate as X
 from . import engine as E
 from . import model as M
 from . import report as R
+from . import views as V
+from . import xlsx as XL
 from .ntfs_i30 import parse_i30
 
 METHOD_HTML = """
@@ -298,7 +300,8 @@ def run(a, tz) -> int:
         if usage:
             cards.insert(0, ("live usage span (UTC)", f"{usage[0]['start_utc'][:10]} → {usage[-1]['start_utc'][:10]}"))
 
-        csvd = os.path.join(out, "csv")
+        csvd = os.path.join(out, "csv", "technical")
+        os.makedirs(csvd, exist_ok=True)
         outputs = dict(findings=findings, timeline=timeline, usage=usage, carved_usage=carved_usage,
                        carved_all=carved_all, wal_changes=wal_changes, evidence=ev_rows)
         if cam:
@@ -314,21 +317,50 @@ def run(a, tz) -> int:
             if isinstance(rows, list):
                 safe = "".join(ch if ch.isalnum() else "_" for ch in title)[:60].strip("_")
                 R.write_csv(os.path.join(csvd, "corroboration_" + safe + ".csv"), rows)
+
+        # ------------------------------------------------------------- analyst views (v2)
+        names = {}
+        for sid, prof in (software or {}).get("profiles", {}).items():
+            names[sid] = ntpath.basename(prof.rstrip("\\/"))
+        empty_cam = dict(usage=[], carved_usage=[], prompts=[], identity=[], packaged_prompts=[], lookups={})
+        activity = V.build_activity(cam or empty_cam, A.wal_changes if A else [], reg, names, tz,
+                                    consent=consent, software=software)
+        apps = V.app_summary(activity)
+        services = V.feature_view(activity)
+        perms = V.permission_view(consent, reg, activity, names)
+        programs = V.program_view(cam or empty_cam, activity, software)
+        recovered = [r for r in activity if r["source"].startswith("Recovered")]
+        for tname, (cols, rows) in V.analyst_tables(activity, apps, services, perms, programs, recovered,
+                                                    findings).items():
+            R.write_table_csv(os.path.join(out, tname + ".csv"), cols, rows)
+        XL.write_xlsx(os.path.join(out, "CAM_activity.xlsx"),
+                      [(title, [c[0] for c in cols], [[r.get(c[1], "") for c in cols] for r in rows])
+                       for title, (cols, rows) in zip(V.SHEET_TITLES, V.analyst_tables(
+                           activity, apps, services, perms, programs, recovered, findings).values())])
+        outputs.update(activity=activity, apps=apps, services=services, permissions=perms, programs=programs)
         R.write_sqlite(os.path.join(out, "camtool_results.sqlite"), {k: v for k, v in outputs.items()})
         with open(os.path.join(out, "camtool_results.json"), "w", encoding="utf-8") as jf:
             json.dump(dict(tool=f"{E.TOOL_NAME} {E.TOOL_VERSION}", evidence=ev_rows, findings=findings,
+                           activity=activity, apps=apps, services=services, permissions=perms, programs=programs,
                            usage=usage, carved=carved_all, wal_changes=wal_changes,
                            consent=consent, prompts=cam["prompts"] if cam else [],
                            identity=cam["identity"] if cam else [], timeline=timeline,
                            corroboration={t: r for t, r in corr}), jf, indent=1, default=str, ensure_ascii=False)
         tzlabel = a.tz if a.tz not in ("+00:00", "UTC") else "+00:00"
-        R.write_html(os.path.join(out, "CAM_report.html"), dict(
-            tool=f"{E.TOOL_NAME} {E.TOOL_VERSION}", generated_utc=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+        generated = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+        R.write_html(os.path.join(out, "CAM_technical_report.html"), dict(
+            tool=f"{E.TOOL_NAME} {E.TOOL_VERSION}", generated_utc=generated,
             evidence_dir=ev_dir, tz_label=tzlabel, cards=cards, findings=findings, evidence=ev_rows,
             integrity_ok=integrity_ok, timeline=timeline, usage=usage, carved_usage=carved_usage, carved_all=carved_all,
             wal_changes=wal_changes, prompts=cam["prompts"] if cam else [], identity=cam["identity"] if cam else [],
             consent=consent or {}, corroboration=corr, structure=structure, raw=raw, method_html=METHOD_HTML))
-        log(f"wrote report, {len(outputs)} CSVs, SQLite and JSON in {time.time() - t0:.2f}s")
+        R.write_html_v2(os.path.join(out, "CAM_report.html"), dict(
+            tool=f"{E.TOOL_NAME} {E.TOOL_VERSION}", generated_utc=generated, evidence_dir=ev_dir, tz_label=tzlabel,
+            summary=V.summary(activity, software, names), activity=activity, apps=apps, features=services,
+            permissions=perms, programs=programs, findings=findings, evidence=ev_rows, integrity_ok=integrity_ok,
+            technical_report="CAM_technical_report.html", method_html=METHOD_HTML))
+        log(f"wrote CAM_report.html, CAM_activity.xlsx, {len(V.SHEET_TITLES)} analyst CSVs, {len(outputs)} technical "
+            f"CSVs, SQLite and JSON in {time.time() - t0:.2f}s ({len(activity)} timeline events)")
         log("findings: " + ", ".join(f"{k}={v}" for k, v in Counter(f['severity'] for f in findings).items()))
         logf.close()
         R.manifest(out)

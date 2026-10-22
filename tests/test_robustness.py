@@ -50,7 +50,8 @@ class TestCLI(unittest.TestCase):
         self.assertEqual(rc, 0, se)
         self.assertEqual(before, sha_dir(self.ev))
         for f in ("CAM_report.html", "camtool_results.json", "camtool_results.sqlite", "run_log.txt", "MANIFEST.sha256",
-                  os.path.join("csv", "usage.csv"), os.path.join("csv", "timeline.csv"), os.path.join("csv", "findings.csv")):
+                  os.path.join("csv", "technical", "usage.csv"), os.path.join("csv", "technical", "timeline.csv"),
+                  "activity_timeline.csv", "findings.csv", "CAM_activity.xlsx", "CAM_technical_report.html"):
             self.assertTrue(os.path.isfile(os.path.join(out, f)), f)
         # manifest verifies
         for line in open(os.path.join(out, "MANIFEST.sha256"), encoding="utf-8"):
@@ -66,8 +67,9 @@ class TestCLI(unittest.TestCase):
         a, b = os.path.join(self.base, "d1"), os.path.join(self.base, "d2")
         run_cli([self.ev, "-o", a, "-q"])
         run_cli([self.ev, "-o", b, "-q"])
-        for f in ("usage.csv", "carved_all.csv", "wal_changes.csv", "timeline.csv", "findings.csv"):
-            self.assertEqual(open(os.path.join(a, "csv", f), "rb").read(), open(os.path.join(b, "csv", f), "rb").read(), f)
+        for f in [os.path.join("csv", "technical", x) for x in ("usage.csv", "carved_all.csv", "wal_changes.csv",
+                                                                 "timeline.csv", "findings.csv")] +                 ["activity_timeline.csv", "apps.csv", "services.csv", "permissions.csv", "programs.csv"]:
+            self.assertEqual(open(os.path.join(a, f), "rb").read(), open(os.path.join(b, f), "rb").read(), f)
 
     def test_missing_folder(self):
         rc, _, se = run_cli([os.path.join(self.base, "nope"), "-q"])

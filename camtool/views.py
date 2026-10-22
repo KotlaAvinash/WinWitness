@@ -319,7 +319,7 @@ def build_activity(cam: dict, wal_changes: list, reg: dict | None, names: dict, 
                  SOURCE_PROMPT, f"NonPackagedGlobalPromptHistory ID {p['ID']}", p.get("sha1", ""), event="prompt")
         if app.startswith("sha1:"):
             r["app_location"] = ""
-        r["note"] = note if start else ("ShownTime is 0 in the database. " + note).strip()
+        r["note"] = note if start else "; ".join(x for x in ("ShownTime is 0 in the database (no date)", note) if x)
         rows.append(r)
     rows.sort(key=lambda r: (r["when_utc"] or "9999", r["app"], r["ref"]))
     totals = Counter((r["app_id"].lower(), r["feature_id"]) for r in rows if r["event"] == "use")
@@ -422,7 +422,8 @@ def permission_view(consent: dict | None, reg: dict | None, activity: list[dict]
         if e.get("nonpackaged") and e.get("Value"):
             row(e["app"], e["capability"], e["Value"], f"Registry ({e.get('hive', '')})", e.get("sid") or "", True)
     flag_order = {"Used while now Deny": 0, "": 1, "Never used": 2}
-    out.sort(key=lambda r: (flag_order.get(r["flag"], 3), r["feature"], r["app"]))
+    scope_rank = lambda sc: 0 if sc == "App setting" else 1 if sc.startswith("Registry") else         {"Desktop-apps switch": 2, "User default": 3, "System default": 4}.get(sc, 5)  # noqa: E731
+    out.sort(key=lambda r: (flag_order.get(r["flag"], 3), scope_rank(r["scope"]), -r["used_count"], r["feature"], r["app"]))
     return out
 
 
@@ -444,3 +445,68 @@ def program_view(cam: dict, activity: list[dict], software: dict | None = None) 
 def day_counts(activity: list[dict]) -> list[dict]:
     c = Counter((r["date"], r["feature"]) for r in _uses(activity) if r["date"])
     return [dict(day=d, feature=f, count=n) for (d, f), n in sorted(c.items())]
+
+
+# --------------------------------------------------------------------------- export tables
+SHEET_TITLES = ["Activity timeline", "Applications", "Services", "Permissions", "Desktop programs", "Recovered",
+                "Findings"]
+ACTIVITY_COLS = [("Date", "date"), ("Start (local)", "when_local"), ("End (local)", "end_local"),
+                 ("Start (UTC)", "when_utc"), ("End (UTC)", "end_utc"), ("Duration", "duration_text"),
+                 ("Duration (s)", "duration_s"), ("Application", "app"), ("Application type", "app_kind"),
+                 ("Service", "feature"), ("What the service is", "service_desc"), ("Allowed/Blocked", "access"),
+                 ("Account", "user"), ("Allowed by", "allowed_by"), ("Use #", "use_no"),
+                 ("Application location", "app_location"), ("Installer", "installer"), ("SHA-1", "sha1"),
+                 ("Source", "source"), ("Evidence record", "ref"), ("Note", "note"), ("Event", "event"),
+                 ("Application id", "app_id")]
+
+
+def analyst_tables(activity, apps, services, perms, programs, recovered, findings) -> dict:
+    """Ordered {csv name: (columns, rows)}; columns are (header, key)."""
+    return {
+        "activity_timeline": (ACTIVITY_COLS, activity),
+        "apps": ([("Application", "app"), ("Type", "app_kind"), ("Services used", "services"), ("Uses", "uses"),
+                  ("Blocked", "blocked"), ("Location prompts", "prompts"), ("First use (local)", "first_local"),
+                  ("Last use (local)", "last_local"), ("First seen (local)", "first_seen_local"),
+                  ("Total time", "total_duration"), ("Location", "app_location"), ("Sources", "sources"),
+                  ("Application id", "app_id")], apps),
+        "services": ([("Service", "feature"), ("What it is", "service_desc"), ("Application", "app"), ("Uses", "uses"),
+                      ("Blocked", "blocked"), ("First use (local)", "first_local"), ("Last use (local)", "last_local"),
+                      ("Total time", "total_duration"), ("Application id", "app_id")], services),
+        "permissions": ([("Flag", "flag"), ("Application", "app"), ("Service", "feature"), ("Setting", "setting"),
+                         ("Decided by", "scope"), ("Account", "user"), ("Times used", "used_count"),
+                         ("Last used (local)", "last_used_local"), ("Application id", "app_id"), ("Note", "note")], perms),
+        "programs": ([("Program", "program"), ("Path", "exe_path"), ("Flag", "location_flag"), ("SHA-1", "sha1"),
+                      ("ProgramID", "program_id"), ("First seen (local)", "first_seen_local"),
+                      ("First seen (UTC)", "first_seen_utc"), ("Uses", "uses"), ("Location prompts", "prompts"),
+                      ("Installer", "installer")], programs),
+        "recovered": (ACTIVITY_COLS, recovered),
+        "findings": ([("Severity", "severity"), ("Category", "category"), ("Finding", "title"), ("Detail", "detail"),
+                      ("Basis", "basis")], findings),
+    }
+
+
+def summary(activity: list[dict], software: dict | None, names: dict) -> dict:
+    uses = _uses(activity)
+    osi = (software or {}).get("os") or {}
+    system = (" ".join(x for x in (osi.get("product"), osi.get("display_version"),
+                                   f"build {osi['build']}.{osi.get('ubr', '')}" if osi.get("build") else "") if x)
+              if osi else "Windows version not stored in CAM (add the SOFTWARE hive to show it)")
+    if not uses:
+        return dict(headline="No capability use recorded", text="The databases hold no usage rows.", system=system)
+    t = sorted(r["when_local"] or r["when_utc"] for r in uses)
+    apps = Counter(r["app"] for r in uses)
+    svcs = Counter(r["feature"] for r in uses)
+    top_app, top_n = apps.most_common(1)[0]
+    rec = sum(1 for r in activity if r["source"].startswith("Recovered"))
+    wal = sum(1 for r in activity if "WAL" in r["source"] and not r["source"].startswith("Recovered"))
+    accounts = sorted({r["user"] for r in uses if r["user"]})
+    text = (f"Between {t[0][:16]} and {t[-1][:16]}, Windows recorded {len(uses):,} uses of "
+            f"{len(svcs)} service{'s' if len(svcs) != 1 else ''} ({', '.join(f'{k} {v}' for k, v in svcs.most_common(6))}) "
+            f"by {len(apps)} application{'s' if len(apps) != 1 else ''}. Most active: {top_app} ({top_n} uses). "
+            f"Account{'s' if len(accounts) != 1 else ''}: {', '.join(accounts) or 'not recorded'}.")
+    if wal:
+        text += f" {wal} uses exist only in the -wal file (not yet saved into the .db)."
+    if rec:
+        text += f" {rec} deleted or unsaved rows were recovered."
+    return dict(headline=f"{len(uses):,} recorded uses by {len(apps)} applications", text=text, system=system,
+                accounts=accounts, period=(t[0], t[-1]))

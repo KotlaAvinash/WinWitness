@@ -191,3 +191,15 @@ def write_html(path: str, ctx: dict):
     S.append(f"</main><script>{JS}</script></body></html>")
     with open(path, "w", encoding="utf-8") as f:
         f.write("".join(S))
+
+
+def write_table_csv(path: str, cols: list, rows: list[dict]):
+    """CSV with friendly headers: cols = [(header, key), ...]."""
+    with open(path, "w", newline="", encoding="utf-8-sig") as f:
+        w = csv.writer(f)
+        w.writerow([c[0] for c in cols])
+        for r in rows:
+            w.writerow([_safe_cell(_flat(r.get(c[1], ""))) for c in cols])
+
+
+from .report_v2 import write_html_v2  # noqa: E402,F401  (re-exported)
