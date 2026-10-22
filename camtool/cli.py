@@ -164,7 +164,7 @@ def run(a, tz) -> int:
 
         corr = []
         # ---- optional registry sources: offline hives in the evidence folder, then --registry
-        from .regf import Hive, RegfError
+        from .regf import Hive
         software = None
         if "SOFTWARE" in files:
             try:
@@ -174,15 +174,15 @@ def run(a, tz) -> int:
                     f"build {software['os'].get('build')}")
                 if software["usage_history_settings"]:
                     corr.append(("CapabilityUsageHistory settings (SOFTWARE hive)", [software["usage_history_settings"]]))
-            except RegfError as ex:
-                log(f"SOFTWARE: skipped ({ex})")
+            except Exception as ex:          # a damaged hive must never stop the run
+                log(f"SOFTWARE: skipped ({type(ex).__name__}: {ex})")
                 software = None
         reg_sources = []
         for role in sorted(k for k in files if k.startswith("NTUSER.DAT:")):
             try:
                 r = X.read_hive_consentstore(Hive(files[role].data), role)
-            except RegfError as ex:
-                log(f"{role}: skipped ({ex})")
+            except Exception as ex:
+                log(f"{role}: skipped ({type(ex).__name__}: {ex})")
                 continue
             parent = os.path.basename(os.path.dirname(files[role].path)).lower()
             for sid, prof in (software or {}).get("profiles", {}).items():

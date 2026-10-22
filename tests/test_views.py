@@ -84,7 +84,7 @@ class TestActivity(unittest.TestCase):
         self.assertEqual(r["feature"], "Screen capture (no border)")
         self.assertEqual(a[0]["use_no"], "#1 of 2")
         self.assertEqual(a[2]["use_no"], "#2 of 2")
-        self.assertEqual(a[0]["installer"], "Microsoft Store / Windows package (no installer path recorded)")
+        self.assertEqual(a[0]["installer"], "Packaged app (MSIX); installer path not recorded in CAM")
 
     def test_wal_row_labelled(self):
         c = cam([usage(10, ft(1), ft(2), "contacts", MAIL), usage(11, ft(3), ft(4), "contacts", MAIL)])
@@ -156,9 +156,9 @@ class TestActivity(unittest.TestCase):
                  usage(2, ft(3), ft(4), "microphone", BRAVE, kind="nonpackaged"),
                  usage(3, ft(5), ft(6), "contacts", MAIL)])
         a = V.build_activity(c, [], None, {}, IST, consent=consent)
-        self.assertEqual(a[0]["allowed_by"], "App setting (this account): Deny")
-        self.assertEqual(a[1]["allowed_by"], "Desktop-apps switch (this account): Allow")
-        self.assertEqual(a[2]["allowed_by"], "System default: Allow")
+        self.assertEqual(a[0]["allowed_by"], "Current setting: Deny (App setting, this account)")
+        self.assertEqual(a[1]["allowed_by"], "Current setting: Allow (Desktop-apps switch, this account)")
+        self.assertEqual(a[2]["allowed_by"], "Current setting: Allow (System default)")
 
     def test_installer_from_software_hive(self):
         sw = dict(uninstall=[dict(name="Brave", install_location=r"C:\Program Files\BraveSoftware\Brave-Browser\Application",

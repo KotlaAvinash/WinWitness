@@ -87,7 +87,9 @@ KNOWN_EXES = {
 }
 WELL_KNOWN_SIDS = {"S-1-5-18": "SYSTEM", "S-1-5-19": "LOCAL SERVICE", "S-1-5-20": "NETWORK SERVICE", "SYSTEM": "SYSTEM"}
 _PURGED = re.compile(r"^<unresolved \w+ ID (\d+): purged>")
-INSTALLER_STORE = "Microsoft Store / Windows package (no installer path recorded)"
+INSTALLER_STORE = "Packaged app (MSIX); installer path not recorded in CAM"
+KIND_PACKAGED, KIND_DESKTOP = "Packaged app (MSIX)", "Desktop program"
+ACCESS_NOT_RECORDED = "Not recorded"
 INSTALLER_NONE = "not recorded in CAM (add the SOFTWARE hive)"
 SOURCE_DB, SOURCE_WAL = "Database", "Database (WAL, not yet in .db)"
 SOURCE_DEL, SOURCE_SLACK = "Recovered (deleted)", "Recovered (WAL slack)"
@@ -155,17 +157,16 @@ def duration_text(s) -> str:
 
 
 def app_location(app_id: str, kind: str) -> tuple[str, bool]:
-    """(location, derived?) - Store apps only have a package name in CAM, so the folder is derived."""
+    """(location, derived?) - packaged apps only have a package name in CAM, so the folder is derived."""
     if kind == "nonpackaged" or "\\" in (app_id or ""):
         return app_id, False
-    if not app_id or app_id.startswith("<"):
-        return "", False
-    if "_" not in app_id:
+    if not app_id or app_id.startswith("<") or "_" not in app_id:
         return "", False
     name, pub = app_id.rsplit("_", 1)
-    if pub.lower() == "cw5n1h2txyewy":
-        return rf"C:\Windows\SystemApps\{name}_{pub}", True
-    return rf"C:\Program Files\WindowsApps\{name}_<version>_<arch>__{pub}", True
+    store = rf"C:\Program Files\WindowsApps\{name}_<version>_<arch>__{pub}"
+    if pub.lower() == "cw5n1h2txyewy":      # Windows-signed: either location is possible
+        return rf"C:\Windows\SystemApps\{name}_{pub}  or  {store}", True
+    return store, True
 
 
 def location_flag(path: str) -> str:
@@ -183,6 +184,8 @@ def location_flag(path: str) -> str:
 
 # --------------------------------------------------------------------------- consent lookup
 class _Consent:
+    """Current consent settings, evaluated the way Windows does: a Deny at a broader level wins."""
+
     def __init__(self, consent: dict | None, reg: dict | None):
         c = consent or {}
         low = lambda *x: tuple(str(v).lower() for v in x)  # noqa: E731
@@ -190,29 +193,47 @@ class _Consent:
         self.classic = {low(r["Capability"], r["User"]): r for r in c.get("ClassicGlobal", [])}
         self.user = {low(r["Capability"], r["User"]): r for r in c.get("UserGlobal", [])}
         self.system = {low(r["Capability"]): r for r in c.get("SystemGlobal", [])}
-        self.reg = {}
-        for e in (reg or {}).get("entries", []):
+        entries = (reg or {}).get("entries", [])
+        self.user_hives = {e.get("hive") for e in entries if str(e.get("hive", "")).upper().startswith("HKCU")}
+        self.reg = defaultdict(list)
+        for e in entries:
             if e.get("app") not in ("(global)", "NonPackaged (default)"):
-                self.reg[low(e["capability"], e["app"])] = e
+                self.reg[low(e["capability"], e["app"])].append(e)
+
+    def reg_entry(self, cap: str, app_id: str, sid: str):
+        """Registry per-app entry for this account only (never another account's hive)."""
+        cands = self.reg.get((str(cap).lower(), str(app_id).lower()), [])
+        for e in cands:
+            if e.get("sid") and str(e["sid"]).lower() == str(sid).lower():
+                return e
+        unknown = [e for e in cands if not e.get("sid") and str(e.get("hive", "")).upper().startswith("HKCU")]
+        if unknown and len(self.user_hives) == 1:
+            return unknown[0]
+        machine = [e for e in cands if str(e.get("hive", "")).upper().startswith("HKLM")]
+        return machine[0] if machine else None
 
     def allowed_by(self, cap: str, sid: str, app_id: str, kind: str) -> str:
         cap_, sid_, app_ = str(cap).lower(), str(sid).lower(), str(app_id).lower()
         meaning = lambda r: r.get("Value_meaning") or M.CONSENT_VALUE.get(r.get("Value"), str(r.get("Value")))  # noqa
-        if kind == "packaged" and (cap_, sid_, app_) in self.app:
-            return f"App setting (this account): {meaning(self.app[(cap_, sid_, app_)])}"
-        r = self.reg.get((cap_, app_))
-        if r is not None and r.get("Value"):
-            return f"Registry app setting: {r['Value']}"
-        if kind == "nonpackaged" and (cap_, sid_) in self.classic:
-            return f"Desktop-apps switch (this account): {meaning(self.classic[(cap_, sid_)])}"
-        if (cap_, sid_) in self.user:
-            return f"User default (this account): {meaning(self.user[(cap_, sid_)])}"
+        levels = []                       # broadest first
         if (cap_,) in self.system:
-            return f"System default: {meaning(self.system[(cap_,)])}"
-        return "not recorded"
-
-    def reg_entry(self, cap: str, app_id: str):
-        return self.reg.get((str(cap).lower(), str(app_id).lower()))
+            levels.append(("System default", meaning(self.system[(cap_,)])))
+        if (cap_, sid_) in self.user:
+            levels.append(("User default, this account", meaning(self.user[(cap_, sid_)])))
+        if kind == "nonpackaged" and (cap_, sid_) in self.classic:
+            levels.append(("Desktop-apps switch, this account", meaning(self.classic[(cap_, sid_)])))
+        if kind == "packaged" and (cap_, sid_, app_) in self.app:
+            levels.append(("App setting, this account", meaning(self.app[(cap_, sid_, app_)])))
+        e = self.reg_entry(cap, app_id, sid)
+        if e is not None and e.get("Value"):
+            levels.append((f"Registry app setting, {e.get('hive', '')}", str(e["Value"])))
+        if not levels:
+            return "not recorded"
+        for name, val in levels:
+            if val == "Deny":
+                return f"Current setting: Deny ({name})"
+        name, val = levels[-1]
+        return f"Current setting: {val} ({name})"
 
 
 def _installer(app_id: str, kind: str, software: dict | None) -> str:
@@ -221,19 +242,36 @@ def _installer(app_id: str, kind: str, software: dict | None) -> str:
     if not software:
         return INSTALLER_NONE
     exe = (app_id or "").lower()
+    broad = {"", "c:", "c:\\program files", "c:\\program files (x86)", "c:\\windows", "c:\\users"}
+    best, best_len = None, -1
     for u in software.get("uninstall", []):
-        loc = (u.get("install_location") or "").strip('"').rstrip("\\").lower()
-        icon = (u.get("display_icon") or "").split(",")[0].strip('"').lower()
-        if (loc and exe.startswith(loc + "\\")) or (icon and icon == exe):
-            src = u.get("install_source") or "(install source not recorded)"
-            bits = [b for b in (u.get("name"), u.get("version")) if b]
-            extra = " ".join(bits)
-            if u.get("publisher"):
-                extra += f" by {u['publisher']}"
-            if u.get("install_date"):
-                extra += f", installed {u['install_date']}"
-            return f"{src} — {extra}"
-    return "no matching installed-program entry in SOFTWARE"
+        icon = (u.get("display_icon") or "").split(",")[0].strip().strip('"').lower()
+        if icon and icon == exe:
+            best, best_len = u, 10 ** 6       # exact DisplayIcon match wins
+            break
+        loc = (u.get("install_location") or "").strip().strip('"').rstrip("\\").lower()
+        if loc in broad or re.fullmatch(r"[a-z]:", loc):
+            continue
+        if exe.startswith(loc + "\\") and len(loc) > best_len:
+            best, best_len = u, len(loc)
+    if best is None:
+        return "no matching installed-program entry in SOFTWARE"
+    src = best.get("install_source") or "(install source not recorded)"
+    extra = " ".join(b for b in (best.get("name"), best.get("version")) if b)
+    if best.get("publisher"):
+        extra += f" by {best['publisher']}"
+    if best.get("install_date"):
+        extra += f", installed {best['install_date']}"
+    return f"{src} — {extra}"
+
+
+def _ft_int(v) -> tuple[int, bool]:
+    """(FILETIME, invalid?) - anything that is not a plausible FILETIME integer becomes 0."""
+    if v in (None, 0):
+        return 0, False
+    if isinstance(v, bool) or not isinstance(v, int) or M.filetime_to_dt(v) is None:
+        return 0, True
+    return v, False
 
 
 # --------------------------------------------------------------------------- activity timeline
@@ -245,27 +283,46 @@ def build_activity(cam: dict, wal_changes: list, reg: dict | None, names: dict, 
     rows = []
 
     def base(app_id, kind, cap, sid, start, stop, access, source, ref, sha1="", app_name="", event="use"):
+        start, bad1 = _ft_int(start)
+        stop, bad2 = _ft_int(stop)
         loc, derived = app_location(app_id, kind)
-        when_utc, end_utc = M.ft_str(start) if start else "", M.ft_str(stop) if stop else ""
+        notes = []
+        if bad1 or bad2:
+            notes.append("invalid stored time in the database (shown as not recorded)")
         dur = round((stop - start) / 1e7, 3) if start and stop and stop >= start else ""
-        r = dict(event=event, when_utc=when_utc, end_utc=end_utc if event == "use" else "",
+        dtext = duration_text(dur) if event == "use" else ""
+        if event == "use" and start and not stop:
+            dtext = "end not recorded"
+            notes.append("end time not recorded (stop = 0): possibly still in use when the evidence was collected")
+        r = dict(event=event, when_utc=M.ft_str(start) if start else "", end_utc=M.ft_str(stop) if stop and event == "use" else "",
                  when_local=M.ft_str(start, tz) if start else "", end_local=M.ft_str(stop, tz) if stop and event == "use" else "",
-                 duration_s=dur, duration_text=duration_text(dur) if event == "use" else "",
-                 app=app_label(app_id, app_name), app_id=app_id, app_kind="Store app" if kind == "packaged" else "Desktop program",
+                 duration_s=dur, duration_text=dtext, app=app_label(app_id, app_name), app_id=app_id,
+                 app_kind=KIND_PACKAGED if kind == "packaged" else KIND_DESKTOP,
                  feature=feature_label(cap), feature_id=cap, service_desc=service_desc(cap), access=access,
-                 user=user_label(sid, names), sid=sid, allowed_by=cons.allowed_by(cap, sid, app_id, kind) if event == "use" else "",
-                 source=source, app_location=loc + ("  (derived)" if derived else ""), installer=_installer(app_id, kind, software),
-                 sha1=sha1, ref=ref, note="", use_no="", _start=start or 0, _stop=stop or 0, _kind=kind)
+                 user=user_label(sid, names), sid=sid,
+                 allowed_by=cons.allowed_by(cap, sid, app_id, kind) if event == "use" else "",
+                 source=source, app_location=loc + ("  (derived)" if derived else ""),
+                 installer=_installer(app_id, kind, software), sha1=sha1, ref=ref, note="", use_no="",
+                 _start=start, _stop=stop, _kind=kind)
         r["date"] = (r["when_local"] or r["when_utc"])[:10]
-        e = cons.reg_entry(cap, app_id) if event == "use" else None
-        if e is not None and e.get("key_last_write") and stop and e["key_last_write"] > stop:
-            r["note"] = (f"setting changed after this use (registry key last written "
+        e = cons.reg_entry(cap, app_id, sid) if event == "use" else None
+        if e is not None and isinstance(e.get("key_last_write"), int) and stop and e["key_last_write"] > stop:
+            notes.append(f"setting changed after this use (registry key last written "
                          f"{M.ft_str(e['key_last_write'])} UTC)")
+        r["note"] = "; ".join(notes)
         return r
 
+    def add_note(r, text):
+        r["note"] = "; ".join(x for x in (r["note"], text) if x)
+
+    live_ids = set()
+    for u in cam.get("usage", []):
+        raw = u.get("raw", {})
+        live_ids.add(_identity_key(u, raw))
     for u in cam.get("usage", []) + cam.get("carved_usage", []):
         st = u.get("status", "")
-        if u.get("source") == "carved":
+        carved = u.get("source") == "carved"
+        if carved:
             source = SOURCE_SLACK if st.startswith("RECOVERED") else SOURCE_DEL
         else:
             source = SOURCE_WAL if (u["table"], u["ID"]) in wal_ins else SOURCE_DB
@@ -277,26 +334,33 @@ def build_activity(cam: dict, wal_changes: list, reg: dict | None, names: dict, 
             note = (f"application identity purged; AppName ID now reads '{app_name.replace('  [carved]', '')}' "
                     f"in the current lookup table, but lookup IDs can be reused after a purge, so it is not used")
             app_name = ""
+        elif carved and not _PURGED.match(u["app"] or ""):
+            if _identity_key(u, raw) in live_ids:
+                note = "identity resolved from current lookup tables (same ID combination is in live rows)"
+            else:
+                note = ("identity resolved from current lookup tables; this ID combination is not in live rows, "
+                        "so an ID may have been reused after a purge: verify")
         r = base(u["app"], u["kind"], u["capability"], u.get("user_sid", ""), raw.get("LastUsedTimeStart"),
                  raw.get("LastUsedTimeStop"), u.get("access", ""), source, f"{u['table']} ID {u['ID']}",
                  u.get("sha1", ""), app_name)
         if note:
-            r["note"] = "; ".join(x for x in (r["note"], note) if x)
+            add_note(r, note)
         rows.append(r)
-    # registry last-use events: merge with identical DB events, add the rest
-    index = {(r["feature_id"].lower(), r["app_id"].lower(), r["_start"]): r for r in rows}
+    # registry last-use events: merge with identical DB events (keeping their source), add the rest
+    index = {(r["feature_id"].lower(), r["app_id"].lower(), r["_start"]): r for r in rows if r["_start"]}
     for e in (reg or {}).get("entries", []):
-        start = e.get("LastUsedTimeStart")
-        if not isinstance(start, int) or not start or e.get("app") in ("(global)", "NonPackaged (default)"):
+        start, _bad = _ft_int(e.get("LastUsedTimeStart"))
+        if not start or e.get("app") in ("(global)", "NonPackaged (default)"):
             continue
         k = (e["capability"].lower(), e["app"].lower(), start)
         if k in index:
-            index[k]["source"] = SOURCE_BOTH
+            if "Registry" not in index[k]["source"]:
+                index[k]["source"] = index[k]["source"] + " + Registry"
             continue
-        stop = e.get("LastUsedTimeStop") if isinstance(e.get("LastUsedTimeStop"), int) else 0
         sid = e.get("sid") or ""
-        r = base(e["app"], "nonpackaged" if e.get("nonpackaged") else "packaged", e["capability"], sid, start, stop,
-                 "Allowed", SOURCE_REG, f"Registry {e.get('hive', '')}")
+        r = base(e["app"], "nonpackaged" if e.get("nonpackaged") else "packaged", e["capability"], sid, start,
+                 e.get("LastUsedTimeStop"), ACCESS_NOT_RECORDED, SOURCE_REG, f"Registry {e.get('hive', '')}")
+        add_note(r, "the registry keeps only the last use per app; whether it was allowed is not recorded")
         if not sid:
             r["user"] = f"account of {e.get('hive', 'registry')}"
         rows.append(r)
@@ -306,30 +370,41 @@ def build_activity(cam: dict, wal_changes: list, reg: dict | None, names: dict, 
     by_prog, by_name = defaultdict(set), defaultdict(set)
     for r in cam.get("identity", []):
         if r.get("binary"):
-            by_prog[r.get("program_id", "")].add(r["binary"])
+            pid = r.get("program_id") or ""
+            if pid and not pid.startswith("<"):
+                by_prog[pid].add(r["binary"])
             by_name[ntpath.basename(r["binary"]).lower()].add(r["binary"])
     for p in cam.get("prompts", []):
         start = p.get("raw", {}).get("ShownTime")
         if not start and p.get("shown_utc"):
             start = _ft_from_str(p["shown_utc"])
-        app, note = p.get("binary") or "", ""
+        app, note, linked = p.get("binary") or "", "", False
         if not app:
-            prog = by_prog.get(p.get("program_id", "")) or set()
-            name = by_name.get((p.get("binary_name") or "").lower()) or set()
-            if len(prog) == 1:
-                app, note = next(iter(prog)), ("path matched by ProgramID (same program, a different file version; "
-                                              "this file's own path was purged)")
-            elif len(name) == 1:
-                app, note = next(iter(name)), "path matched by file name (this file's own path was purged)"
-            elif p.get("binary_name"):
+            pid = p.get("program_id") or ""
+            prog = by_prog.get(pid) if pid and not pid.startswith("<") else set()
+            bname = (p.get("binary_name") or "").lower()
+            name = by_name.get(bname) if bname and not bname.startswith("<") else set()
+            if prog and len(prog) == 1:
+                app, linked = next(iter(prog)), True
+                note = ("path matched by ProgramID (same program, a different file version; "
+                        "this file's own path was purged)")
+            elif name and len(name) == 1:
+                app, linked = next(iter(name)), True
+                note = "path matched by file name (this file's own path was purged)"
+            elif p.get("binary_name") and not p["binary_name"].startswith("<"):
                 app, note = p["binary_name"], "only the file name is recorded"
             elif p.get("sha1"):
                 app, note = "sha1:" + p["sha1"], "path purged; look up this SHA-1 in Amcache"
-        r = base(app, "nonpackaged", p.get("capability", "location"), p.get("user_sid", ""), start, 0, "Prompt shown",
-                 SOURCE_PROMPT, f"NonPackagedGlobalPromptHistory ID {p['ID']}", p.get("sha1", ""), event="prompt")
+        r = base(app, "nonpackaged", p.get("capability", "location"), p.get("user_sid", ""), start, 0,
+                 "Prompt shown", SOURCE_PROMPT, f"NonPackagedGlobalPromptHistory ID {p['ID']}", p.get("sha1", ""),
+                 event="prompt")
         if app.startswith("sha1:"):
             r["app_location"] = ""
-        r["note"] = note if start else "; ".join(x for x in ("ShownTime is 0 in the database (no date)", note) if x)
+        elif linked:
+            r["app_location"] = app + "  (derived: path of a matching program record)"
+        if not r["_start"]:
+            add_note(r, "ShownTime is 0 in the database (no date)")
+        add_note(r, note)
         rows.append(r)
     rows.sort(key=lambda r: (r["when_utc"] or "9999", r["app"], r["ref"]))
     totals = Counter((r["app_id"].lower(), r["feature_id"]) for r in rows if r["event"] == "use")
@@ -343,6 +418,13 @@ def build_activity(cam: dict, wal_changes: list, reg: dict | None, names: dict, 
         for k in ("_start", "_stop", "_kind"):
             r.pop(k, None)
     return rows
+
+
+def _identity_key(u: dict, raw: dict) -> tuple:
+    """Lookup-ID combination that identifies a usage row's application and service."""
+    if u.get("kind") == "packaged":
+        return ("p", raw.get("PackageFamilyName"), raw.get("AppName"), raw.get("Capability"))
+    return ("n", raw.get("BinaryFullPath"), raw.get("FileID"), raw.get("Capability"))
 
 
 def _ft_from_str(s: str) -> int:
@@ -411,8 +493,9 @@ def permission_view(consent: dict | None, reg: dict | None, activity: list[dict]
     def row(app_id, cap, setting, scope, sid, per_app):
         u = used.get((str(app_id).lower(), str(cap).lower()), [])
         flag = ""
+        allowed = [x for x in u if x.get("access") == "Allowed"]
         if per_app:
-            if u and setting == "Deny":
+            if allowed and setting == "Deny":
                 flag = "Used while now Deny"
             elif not u:
                 flag = "Never used"

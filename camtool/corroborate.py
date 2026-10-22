@@ -486,23 +486,28 @@ CS_MACHINE = r"Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentS
 
 
 def _hive_consent_entries(cs_key, hive_label: str) -> list[dict]:
-    """Walk a ConsentStore key of an offline hive into read_live_registry()-shaped entries."""
+    """Walk a ConsentStore key of an offline hive into read_live_registry()-shaped entries.
+
+    Registry values are merged first and our own fields set afterwards, so a value that happens to be
+    named 'app' or 'hive' can never overwrite them (or raise on a duplicate keyword)."""
     out = []
     if cs_key is None:
         return out
+
+    def entry(key, cap, app, nonpackaged):
+        e = dict(key.values())
+        e.update(hive=hive_label, capability=cap, app=app, nonpackaged=nonpackaged, key_last_write=key.last_write)
+        return e
+
     for cap in cs_key.subkeys():
-        out.append(dict(hive=hive_label, capability=cap.name, app="(global)", nonpackaged=False,
-                        key_last_write=cap.last_write, **cap.values()))
+        out.append(entry(cap, cap.name, "(global)", False))
         for app in cap.subkeys():
             if app.name == "NonPackaged":
-                out.append(dict(hive=hive_label, capability=cap.name, app="NonPackaged (default)",
-                                nonpackaged=False, key_last_write=app.last_write, **app.values()))
+                out.append(entry(app, cap.name, "NonPackaged (default)", False))
                 for np_ in app.subkeys():
-                    out.append(dict(hive=hive_label, capability=cap.name, app=np_.name.replace("#", "\\"),
-                                    nonpackaged=True, key_last_write=np_.last_write, **np_.values()))
+                    out.append(entry(np_, cap.name, np_.name.replace("#", "\\"), True))
             else:
-                out.append(dict(hive=hive_label, capability=cap.name, app=app.name, nonpackaged=False,
-                                key_last_write=app.last_write, **app.values()))
+                out.append(entry(app, cap.name, app.name, False))
     return out
 
 

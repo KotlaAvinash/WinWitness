@@ -173,7 +173,7 @@ function setFilter(k,v){F[k]=v;const m={app:'#f-app',svc:'#f-svc'}[k];if(m)$(m).
 let PAGE=300,shownN=PAGE,cur=[];
 function dayLabel(d){if(!d)return 'Date not recorded';const x=new Date(d+'T00:00:00');return isNaN(x)?d:x.toLocaleDateString(undefined,{weekday:'long',year:'numeric',month:'long',day:'numeric'})}
 function sentence(r){if(r.event==='prompt')return `Windows asked for <b>${esc(r.feature)}</b> permission for <b>${esc(r.app)}</b>.`;
-return `<b>${esc(r.app)}</b> used <b>${esc(r.feature)}</b> ${r.duration_text&&r.duration_text!=='instant'?'for <b>'+esc(r.duration_text)+'</b>':'(instant access)'} — <b>${esc(r.access.toLowerCase())}</b>${r.user?' under account '+esc(r.user):''}.`}
+return `<b>${esc(r.app)}</b> used <b>${esc(r.feature)}</b> ${r.duration_text==='end not recorded'?'(end time not recorded)':r.duration_text&&r.duration_text!=='instant'?'for <b>'+esc(r.duration_text)+'</b>':r.duration_text==='instant'?'(instant access)':''} — <b>${esc(r.access.toLowerCase())}</b>${r.user?' under account '+esc(r.user):''}.`}
 function row(r,i){const loc=r.app_location||r.app_id;return `<div class="ev" data-i="${i}">
 <div class="t">${esc(hm(T(r)))}${r.end_local||r.end_utc?' → '+esc(hm(r.end_local||r.end_utc)):''}<small>${r.event==='use'?esc(r.duration_text||''):'prompt'}${r.use_no?' · '+esc(r.use_no):''}</small></div>
 <div class="app"><span class="av" style="box-shadow:inset 0 0 0 2px var(--s${svcSlot(r.feature)})">${esc((r.app||'?').replace(/^unknown /,'?').slice(0,1).toUpperCase())}</span>
@@ -184,7 +184,7 @@ function row(r,i){const loc=r.app_location||r.app_id;return `<div class="ev" dat
 <dt>Start / end (local)</dt><dd>${esc(r.when_local)}${r.end_local?' → '+esc(r.end_local):''}</dd>
 <dt>Start / end (UTC)</dt><dd>${esc(r.when_utc)}${r.end_utc?' → '+esc(r.end_utc):''}</dd>
 <dt>Duration</dt><dd>${esc(r.duration_text||'—')}</dd><dt>Account</dt><dd>${esc(r.user||'—')}</dd>
-<dt>Allowed by</dt><dd>${esc(r.allowed_by||'—')}</dd><dt>Use number</dt><dd>${esc(r.use_no||'—')}</dd>
+<dt>Setting (current)</dt><dd>${esc(r.allowed_by||'—')}</dd><dt>Use number</dt><dd>${esc(r.use_no||'—')}</dd>
 <dt>Application id</dt><dd class="mono">${esc(r.app_id)}</dd><dt>Application location</dt><dd class="mono">${esc(r.app_location||'—')}</dd>
 <dt>Installer</dt><dd>${esc(r.installer||'—')}</dd>${r.sha1?`<dt>SHA-1</dt><dd class="mono">${esc(r.sha1)}</dd>`:''}
 <dt>Evidence record</dt><dd>${esc(r.ref)} · ${esc(r.source)}</dd>${r.note?`<dt>Note</dt><dd>${esc(r.note)}</dd>`:''}</dl></div></div>`}
@@ -212,7 +212,7 @@ let s2=`<svg viewBox="0 0 ${W2} ${H}" height="${H}" role="img" aria-label="Uses 
 hours.forEach((n,h)=>{const hh=(H-pb-pt)*n/m2;s2+=`<rect x="${5+h*b2+1}" y="${H-pb-hh}" width="${b2-2}" height="${Math.max(hh,n?1:0)}" rx="3" fill="var(--s1)" data-t="${h}:00|uses|${n}"/>`;
 if(h%3===0)s2+=`<text x="${5+h*b2+b2/2}" y="${H-8}" text-anchor="middle" font-size="10" fill="var(--muted)">${String(h).padStart(2,'0')}</text>`});
 $('#c-hour').innerHTML=s2+'</svg>';
-$$('#c-day rect,#c-hour rect').forEach(r=>{r.addEventListener('mousemove',e=>{const[a,b,c]=r.dataset.t.split('|');showTip(e,`<b>${a}</b><br>${b}: ${c}`)});r.addEventListener('mouseleave',hideTip)})}
+$$('#c-day rect,#c-hour rect').forEach(r=>{r.addEventListener('mousemove',e=>{const[a,b,c]=r.dataset.t.split('|');showTip(e,`<b>${esc(a)}</b><br>${esc(b)}: ${esc(c)}`)});r.addEventListener('mouseleave',hideTip)})}
 /* ---------- generic tables ---------- */
 function table(el,rows,cols,opts={}){const st={k:null,asc:true,q:''};function draw(){let rs=rows.filter(r=>!st.q||cols.map(c=>r[c[0]]).join(' ').toLowerCase().includes(st.q));
 if(opts.filter)rs=rs.filter(opts.filter);if(st.k)rs=[...rs].sort((a,b)=>{const x=a[st.k],y=b[st.k];const c=(typeof x==='number'&&typeof y==='number')?x-y:String(x??'').localeCompare(String(y??''));return st.asc?c:-c});
@@ -255,7 +255,8 @@ def write_html_v2(path: str, ctx: dict) -> None:
     data = dict(activity=act, apps=ctx["apps"], features=ctx["features"], permissions=ctx["permissions"],
                 programs=ctx["programs"], findings=ctx["findings"], serviceSlot=dict(SERVICE_SLOT),
                 serviceIcon={v[0]: v[2] for v in SERVICES.values()}, icons={k: 1 for k in ICONS})
-    data_json = json.dumps(data, ensure_ascii=False, default=str).replace("</", "<\\/")
+    # every '<' is escaped so no evidence string can open or close a tag (incl. the '<!--<script>' state)
+    data_json = json.dumps(data, ensure_ascii=False, default=str).replace("<", "\\u003c")
     symbols = "".join(f'<symbol id="ic-{k}" viewBox="0 0 24 24">{v}</symbol>' for k, v in ICONS.items())
     icon = lambda k: f'<svg class="i" viewBox="0 0 24 24"><use href="#ic-{k}"/></svg>'  # noqa: E731
     tiles = [("Recorded uses", f"{len(uses):,}"), ("Applications", f"{len({r['app_id'].lower() for r in uses}):,}"),
@@ -295,7 +296,7 @@ record: service meaning, start/end in local and UTC, account, the setting that a
 <p class="lead">One card per application: services it used, how often, total time, first and last use. Click a card to filter the timeline.</p><div class="appgrid" id="appgrid"></div></section>
 <section id="features"><h2>{icon('shield')}Services</h2><p class="lead">Which application used each service, how many times and when.</p><div id="t-features"></div></section>
 <section id="permissions"><h2>{icon('check')}Permissions</h2><p class="lead">Current Allow / Deny / Prompt settings from CapabilityConsentStorage.db
-(and the registry when a hive is supplied), set against actual use. <b>Used while now Deny</b> means the setting was changed after the app used the service.</p><div id="t-perm"></div></section>
+(and the registry when a hive is supplied), set against actual use. <b>Used while now Deny</b> (counted on allowed uses only) suggests the setting was changed after the app used the service.</p><div id="t-perm"></div></section>
 <section id="programs"><h2>{icon('file')}Desktop programs</h2><p class="lead">Every desktop program Windows recorded, with its path, SHA-1 (as in Amcache), first-seen time, and
 whether it ran from an unusual place.</p><div id="t-prog"></div></section>
 <section id="recovered"><h2>{icon('restore')}Recovered records <span class="count" id="rec-n"></span></h2><p class="lead">Rows no longer in the live database:

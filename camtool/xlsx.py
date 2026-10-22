@@ -9,7 +9,7 @@ import re
 import zipfile
 from xml.sax.saxutils import escape
 
-_CTRL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
+_CTRL = re.compile("[\x00-\x08\x0b\x0c\x0e-\x1f￾￿\ud800-\udfff]")   # chars XML 1.0 forbids
 _BAD_NAME = re.compile(r"[\[\]:*?/\\]")
 
 
@@ -62,6 +62,13 @@ def write_xlsx(path: str, sheets: list[tuple[str, list[str], list[list]]]) -> No
         used.add(n.lower())
         names.append(n)
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
+        _w = z.writestr
+
+        def writestr(name, data):                 # fixed timestamp -> byte-identical output
+            zi = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
+            zi.compress_type = zipfile.ZIP_DEFLATED
+            _w(zi, data)
+        z.writestr = writestr
         z.writestr("[Content_Types].xml",
                    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
                    '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
