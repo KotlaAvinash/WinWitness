@@ -2,7 +2,7 @@
 """Build a FAKE but realistic Capability Access Manager evidence folder for demos and screenshots.
 
     python docs/demo/build_demo_evidence.py <output folder>
-    python camtool_cli.py <output folder> -o <report folder> --tz +05:30
+    python winwitness_cli.py <output folder> -o <report folder> --tz +05:30
 
 Everything here is invented: a made-up account (S-1-5-21-1111111111-2222222222-3333333333-1001,
 user folder "analyst"), random hashes, and a short story: video calls in Teams and Zoom, Mail reading

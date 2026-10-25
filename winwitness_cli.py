@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Launcher: python camtool_cli.py <evidence folder> -o <output folder> [options]
+"""Launcher: python winwitness_cli.py <evidence folder> -o <output folder> [options]
 
 Works with `python -I` (isolated mode) because it adds its own folder explicitly.
 """

@@ -102,7 +102,7 @@ Rows that are no longer in the live database: deleted rows carved from free spac
 The report follows the system theme. Use the moon button to switch between light and dark.
 
 ### Desktop window (GUI)
-`python camtool_gui.py` opens a small window with these controls:
+`python winwitness_gui.py` opens a small window with these controls:
 * the evidence folder
 * the output folder
 * the local time offset
@@ -115,7 +115,7 @@ The report follows the system theme. Use the moon button to switch between light
 ### Try it with demo data
 ```bash
 python docs/demo/build_demo_evidence.py demo_evidence
-python camtool_cli.py demo_evidence -o demo_report --tz +05:30
+python winwitness_cli.py demo_evidence -o demo_report --tz +05:30
 ```
 Open `demo_report/CAM_report.html`. The demo contains live rows, rows only in the `-wal` file, deleted rows to recover, a blocked attempt, location prompts and programs run from unusual places.
 
@@ -181,9 +181,9 @@ Integers in the history tables are foreign keys into lookup tables. Every lookup
 
 ### Run
 ```bash
-python camtool_cli.py "<folder with the databases>" -o "<output folder>" --tz +05:30
+python winwitness_cli.py "<folder with the databases>" -o "<output folder>" --tz +05:30
 ```
-GUI: `python camtool_gui.py`. Pick the folder, click **Run analysis**, then **Open report**.
+GUI: `python winwitness_gui.py`. Pick the folder, click **Run analysis**, then **Open report**.
 
 Files are found automatically by name (case-insensitive):
 * `CapabilityAccessManager.db` with its `-wal`, `-shm`, `.FileSlack` and `-wal.FileSlack`

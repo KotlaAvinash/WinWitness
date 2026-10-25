@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Small Tkinter front-end for WinWitness. Double-click or run:  python camtool_gui.py"""
+"""Small Tkinter front-end for WinWitness. Double-click or run:  python winwitness_gui.py"""
 import os
 import queue
 import sys
