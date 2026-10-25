@@ -112,6 +112,10 @@ def run(a, tz) -> int:
         if os.path.abspath(p).startswith(out + os.sep):
             print("error: output folder must not contain the evidence", file=sys.stderr)
             return 2
+    ev_key, out_key = (os.path.normcase(os.path.realpath(x)) for x in (ev_dir, out))
+    if out_key == ev_key or out_key.startswith(ev_key.rstrip(os.sep) + os.sep):
+        print("error: output folder must not be inside the evidence folder (write reports somewhere else)", file=sys.stderr)
+        return 2
     os.makedirs(out, exist_ok=True)
     os.makedirs(os.path.join(out, "csv"), exist_ok=True)
     logf = open(os.path.join(out, "run_log.txt"), "w", encoding="utf-8")

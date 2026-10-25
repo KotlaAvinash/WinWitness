@@ -155,7 +155,7 @@ class App(tk.Tk):
                     self.running = False
                     self.run_btn.configure(state="normal")
                     rc = item[1]
-                    self.status.configure(text={0: "done - inputs unchanged", 2: "nothing to analyse",
+                    self.status.configure(text={0: "done - inputs unchanged", 2: "stopped - see the message below",
                                                 3: "INTEGRITY FAILURE"}.get(rc, f"finished (code {rc})"))
                     txt = self.log.get("1.0", "end")
                     for line in txt.splitlines():

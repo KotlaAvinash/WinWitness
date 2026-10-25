@@ -151,14 +151,15 @@ class TestHiveEvidence(unittest.TestCase):
         import tempfile
         from tests import fixtures as FX
         from tests.test_robustness import run_cli
-        d = tempfile.mkdtemp()
+        base = tempfile.mkdtemp()
+        d = os.path.join(base, "evidence")
         try:
             FX.build(d)
             open(os.path.join(d, "NTUSER.DAT"), "wb").write(hivegen.build({
                 P(CS, "webcam", "Vendor.App01_abcdefghijklm"): {"Value": "Deny",
                                                                 "LastUsedTimeStart": ("qword", 134300000000000000)}}))
             open(os.path.join(d, "SOFTWARE"), "wb").write(b"not a hive at all")
-            out = os.path.join(d, "out")
+            out = os.path.join(base, "out")
             rc, so, se = run_cli([d, "-o", out, "-q"])
             self.assertEqual(rc, 0, se)
             res = json.load(open(os.path.join(out, "winwitness_results.json"), encoding="utf-8"))
@@ -166,7 +167,7 @@ class TestHiveEvidence(unittest.TestCase):
             log = open(os.path.join(out, "run_log.txt"), encoding="utf-8").read()
             self.assertIn("SOFTWARE: skipped", log)
         finally:
-            shutil.rmtree(d, ignore_errors=True)
+            shutil.rmtree(base, ignore_errors=True)
 
 
 if __name__ == "__main__":

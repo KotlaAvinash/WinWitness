@@ -200,7 +200,7 @@ You can also pass a single `.db` file.
 
 | Option | Purpose |
 |---|---|
-| `-o DIR` | Output folder. Default: `./winwitness_output_<UTC time>` |
+| `-o DIR` | Output folder. Default: `./winwitness_output_<UTC time>`. Must be outside the evidence folder; the tool refuses to write reports next to the evidence. |
 | `--tz +HH:MM` | Adds a local-time column. UTC is always included |
 | `--registry live` | Compares with this machine's HKCU/HKLM ConsentStore. Only meaningful for the same machine and user; the report says whether the SID matches |
 | `--registry FILE.reg` | Compares with a `regedit` export of a ConsentStore key (e.g. from a loaded NTUSER.DAT) |

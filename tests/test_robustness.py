@@ -94,6 +94,20 @@ class TestCLI(unittest.TestCase):
         rc, _, se = run_cli([self.ev, "-o", self.ev, "-q"])
         self.assertEqual(rc, 2)
 
+    def test_output_folder_under_evidence_refused(self):
+        before = sorted(os.listdir(self.ev))
+        for args in ([self.ev, "-o", os.path.join(self.ev, "report")],
+                     [self.ev, "-o", os.path.join(self.ev, "a", "b")],
+                     [os.path.join(self.ev, M.CAM_DB), "-o", os.path.join(self.ev, "report")]):
+            rc, _, se = run_cli(args + ["-q"])
+            self.assertEqual(rc, 2, args)
+            self.assertIn("evidence folder", se)
+        self.assertEqual(before, sorted(os.listdir(self.ev)))      # nothing written next to the evidence
+
+    def test_output_beside_evidence_with_similar_name_allowed(self):
+        rc, _, se = run_cli([self.ev, "-o", self.ev + "_report", "-q"])
+        self.assertEqual(rc, 0, se)
+
     def test_only_consent_db(self):
         d = tempfile.mkdtemp(dir=self.base)
         shutil.copy(os.path.join(self.ev, M.CONSENT_DB), d)
