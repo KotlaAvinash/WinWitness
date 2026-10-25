@@ -158,7 +158,7 @@ def build(dirpath: str, n_old=300, n_live=120, n_wal=6, wal_update=True, wal_del
         n_main_pages = len(open(os.path.join(dirpath, "CapabilityAccessManager.db"), "rb").read()) // 4096
         # rows whose leaf page lies in the tail
         tail_ids = []
-        from camtool.sqlite_low import parse_db_header, PageImage, BTreeReader
+        from winwitness.sqlite_low import parse_db_header, PageImage, BTreeReader
         img = PageImage(big_bytes, parse_db_header(big_bytes))
         rd = BTreeReader(img)
         root = [r for r in rd.schema() if r["name"] == "PackagedUsageHistory"][0]["rootpage"]

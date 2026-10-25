@@ -12,8 +12,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import tkinter as tk  # noqa: E402
 from tkinter import filedialog, messagebox, ttk  # noqa: E402
 
-from camtool import cli  # noqa: E402
-from camtool import engine as E  # noqa: E402
+from winwitness import cli  # noqa: E402
+from winwitness import engine as E  # noqa: E402
 
 
 class _QueueWriter:
@@ -92,7 +92,7 @@ class App(tk.Tk):
             self.ev.set(d)
             if not self.out.get():
                 stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-                self.out.set(os.path.join(os.path.dirname(d), f"camtool_output_{stamp}"))
+                self.out.set(os.path.join(os.path.dirname(d), f"winwitness_output_{stamp}"))
 
     def pick_out(self):
         d = filedialog.askdirectory(title="Output folder")
@@ -172,7 +172,7 @@ class App(tk.Tk):
 
     def open_report(self):
         if self.out_dir:
-            webbrowser.open("file:///" + os.path.join(self.out_dir, "CAM_report.html").replace("\\", "/"))
+            webbrowser.open("file:///" + os.path.join(self.out_dir, "WinWitness_report.html").replace("\\", "/"))
 
     def open_folder(self):
         d = self.out_dir or self.out.get()

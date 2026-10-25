@@ -68,7 +68,7 @@ def discover(folder: str) -> dict[str, str]:
             dirs[:] = []
             continue
         # never descend into our own output or into the working copy area
-        dirs[:] = [d for d in dirs if d.lower() not in ("testing", "working tool", "camtool_output", "__pycache__")]
+        dirs[:] = [d for d in dirs if d.lower() not in ("testing", "working tool", "winwitness_output", "__pycache__")]
         for f in files:
             cands.append(os.path.join(root, f))
     for p in sorted(cands, key=lambda x: (x.count(os.sep), x)):

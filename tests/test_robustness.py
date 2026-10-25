@@ -9,12 +9,12 @@ import tempfile
 import unittest
 from contextlib import redirect_stdout, redirect_stderr
 
-from camtool import cli
-from camtool import engine as E
-from camtool import model as M
+from winwitness import cli
+from winwitness import engine as E
+from winwitness import model as M
 from tests import fixtures as FX
 
-FUZZ_ROUNDS = int(os.environ.get("CAMTOOL_FUZZ_ROUNDS", "150"))
+FUZZ_ROUNDS = int(os.environ.get("WINWITNESS_FUZZ_ROUNDS", "150"))
 
 
 def run_cli(args):
@@ -49,16 +49,16 @@ class TestCLI(unittest.TestCase):
         rc, so, se = run_cli([self.ev, "-o", out, "-q", "--tz", "+05:30"])
         self.assertEqual(rc, 0, se)
         self.assertEqual(before, sha_dir(self.ev))
-        for f in ("CAM_report.html", "camtool_results.json", "camtool_results.sqlite", "run_log.txt", "MANIFEST.sha256",
+        for f in ("WinWitness_report.html", "winwitness_results.json", "winwitness_results.sqlite", "run_log.txt", "MANIFEST.sha256",
                   os.path.join("csv", "technical", "usage.csv"), os.path.join("csv", "technical", "timeline.csv"),
-                  "activity_timeline.csv", "findings.csv", "CAM_activity.xlsx", "CAM_technical_report.html"):
+                  "activity_timeline.csv", "findings.csv", "WinWitness_activity.xlsx", "WinWitness_technical_report.html"):
             self.assertTrue(os.path.isfile(os.path.join(out, f)), f)
         # manifest verifies
         for line in open(os.path.join(out, "MANIFEST.sha256"), encoding="utf-8"):
             h, name = line.strip().split(" *", 1)
             self.assertEqual(hashlib.sha256(open(os.path.join(out, name), "rb").read()).hexdigest(), h, name)
         # results DB is queryable
-        con = sqlite3.connect(os.path.join(out, "camtool_results.sqlite"))
+        con = sqlite3.connect(os.path.join(out, "winwitness_results.sqlite"))
         n = con.execute("select count(*) from usage").fetchone()[0]
         con.close()
         self.assertEqual(n, len(self.truth["live_ids"]) + 1)   # + 1 NonPackaged row
@@ -156,7 +156,7 @@ class TestFuzz(unittest.TestCase):
             shutil.rmtree(d, ignore_errors=True)
 
     def test_random_byte_flips(self):
-        rnd = random.Random(int(os.environ.get("CAMTOOL_FUZZ_SEED", "1234")))
+        rnd = random.Random(int(os.environ.get("WINWITNESS_FUZZ_SEED", "1234")))
         for i in range(FUZZ_ROUNDS):
             files = dict(self.orig)
             target = rnd.choice([M.CAM_DB, M.CAM_DB + "-wal", M.CONSENT_DB])

@@ -6,10 +6,10 @@ import tempfile
 import unittest
 import zipfile
 
-from camtool import model as M
-from camtool import report as R
-from camtool import views as V
-from camtool.xlsx import write_xlsx
+from winwitness import model as M
+from winwitness import report as R
+from winwitness import views as V
+from winwitness.xlsx import write_xlsx
 from tests import hivegen
 from tests.test_views import BRAVE, IST, MAIL, SID, cam, ft, usage
 from tests.test_report import ctx
@@ -115,8 +115,8 @@ class TestHiveValueCollision(unittest.TestCase):
     """#7 value names equal to our own field names must not crash."""
 
     def test_value_named_app(self):
-        from camtool.corroborate import read_hive_consentstore
-        from camtool.regf import Hive
+        from winwitness.corroborate import read_hive_consentstore
+        from winwitness.regf import Hive
         b = hivegen.build({BS.join([CS, "webcam", CAMAPP]): {"app": "x", "hive": "y", "Value": "Allow"}})
         r = read_hive_consentstore(Hive(b), "t")
         e = [x for x in r["entries"] if x["app"] == CAMAPP][0]

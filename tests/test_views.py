@@ -1,8 +1,8 @@
 """Analyst views (Task 3): activity timeline, apps, services, permissions, programs."""
 import unittest
 
-from camtool import model as M
-from camtool import views as V
+from winwitness import model as M
+from winwitness import views as V
 
 SID = "S-1-5-21-1-2-3-1001"
 MAIL = "microsoft.windowscommunicationsapps_8wekyb3d8bbwe"

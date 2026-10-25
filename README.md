@@ -117,7 +117,7 @@ The report follows the system theme. Use the moon button to switch between light
 python docs/demo/build_demo_evidence.py demo_evidence
 python winwitness_cli.py demo_evidence -o demo_report --tz +05:30
 ```
-Open `demo_report/CAM_report.html`. The demo contains live rows, rows only in the `-wal` file, deleted rows to recover, a blocked attempt, location prompts and programs run from unusual places.
+Open `demo_report/WinWitness_report.html`. The demo contains live rows, rows only in the `-wal` file, deleted rows to recover, a blocked attempt, location prompts and programs run from unusual places.
 
 ---
 
@@ -200,7 +200,7 @@ You can also pass a single `.db` file.
 
 | Option | Purpose |
 |---|---|
-| `-o DIR` | Output folder. Default: `./camtool_output_<UTC time>` |
+| `-o DIR` | Output folder. Default: `./winwitness_output_<UTC time>` |
 | `--tz +HH:MM` | Adds a local-time column. UTC is always included |
 | `--registry live` | Compares with this machine's HKCU/HKLM ConsentStore. Only meaningful for the same machine and user; the report says whether the SID matches |
 | `--registry FILE.reg` | Compares with a `regedit` export of a ConsentStore key (e.g. from a loaded NTUSER.DAT) |
@@ -214,14 +214,14 @@ Exit codes: `0` ok · `1` nothing parseable · `2` bad arguments / no databases 
 ### Output
 | File | Content |
 |---|---|
-| `CAM_report.html` | The analyst report (one offline file, light/dark). See "Reading the report" below |
-| `CAM_activity.xlsx` | Excel workbook with 7 sheets: Activity timeline, Applications, Services, Permissions, Desktop programs, Recovered, Findings |
+| `WinWitness_report.html` | The analyst report (one offline file, light/dark). See "Reading the report" below |
+| `WinWitness_activity.xlsx` | Excel workbook with 7 sheets: Activity timeline, Applications, Services, Permissions, Desktop programs, Recovered, Findings |
 | `activity_timeline.csv` | One row per use or prompt, with columns: date, start/end (local and UTC), duration, application and type, service and what it means, Allowed/Blocked, account, allowed by, use # (e.g. `#3 of 12`), application location, installer, SHA-1, source and evidence record |
 | `apps.csv`, `services.csv`, `permissions.csv`, `programs.csv`, `recovered.csv`, `findings.csv` | The other analyst views |
-| `CAM_technical_report.html` | Database internals: page map, WAL frames and row diff, carving locations, raw tables, corroboration |
+| `WinWitness_technical_report.html` | Database internals: page map, WAL frames and row diff, carving locations, raw tables, corroboration |
 | `csv/technical/` | One CSV per technical dataset, including every raw table |
-| `camtool_results.sqlite` | All datasets in one queryable database |
-| `camtool_results.json` | Everything, machine-readable |
+| `winwitness_results.sqlite` | All datasets in one queryable database |
+| `winwitness_results.json` | Everything, machine-readable |
 | `run_log.txt` | Timestamped log with the SHA-256 of every input |
 | `MANIFEST.sha256` | SHA-256 of every output file |
 
@@ -314,9 +314,9 @@ The suite builds synthetic evidence with known ground truth and checks:
 Optional environment variables:
 | Variable | Effect |
 |---|---|
-| `CAMTOOL_FUZZ_ROUNDS` | More fuzz rounds |
-| `CAMTOOL_FUZZ_SEED` | Fuzz seed |
-| `CAMTOOL_STRESS=big` | 1M rows / 20,000 transactions |
+| `WINWITNESS_FUZZ_ROUNDS` | More fuzz rounds |
+| `WINWITNESS_FUZZ_SEED` | Fuzz seed |
+| `WINWITNESS_STRESS=big` | 1M rows / 20,000 transactions |
 
 ## 5. Limitations
 * Registry transaction logs (.LOG1/.LOG2) are not replayed, so a dirty hive shows its last flushed state. Amcache.hve is not parsed natively; use an AmcacheParser CSV.

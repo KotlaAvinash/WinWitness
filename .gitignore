@@ -1,6 +1,6 @@
 __pycache__/
 *.pyc
-camtool_output_*/
+winwitness_output_*/
 # never commit evidence or results
 *.db
 *.db-wal

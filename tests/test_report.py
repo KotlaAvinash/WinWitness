@@ -7,7 +7,7 @@ import tempfile
 import unittest
 import zipfile
 
-from camtool import report as R
+from winwitness import report as R
 
 
 def ctx(n=3):
@@ -20,7 +20,7 @@ def ctx(n=3):
     return dict(tool="WinWitness 2.1.0", generated_utc="2026-10-23 00:00:00", evidence_dir="E", tz_label="+05:30",
                 summary=dict(period="", accounts=[], system=""), activity=act, apps=[], features=[], permissions=[],
                 programs=[], findings=[], day_counts=[], hour_counts=[], evidence=[], integrity_ok=True,
-                technical_report="CAM_technical_report.html", method_html="<p>m</p>")
+                technical_report="WinWitness_technical_report.html", method_html="<p>m</p>")
 
 
 def embedded(path):
@@ -41,7 +41,7 @@ class TestReport(unittest.TestCase):
         self.assertEqual(pos, sorted(pos))
 
     def test_report_branded_winwitness(self):
-        from camtool import engine as E
+        from winwitness import engine as E
         self.assertEqual(E.TOOL_NAME, "WinWitness")
         p = os.path.join(tempfile.mkdtemp(), "r.html")
         R.write_html_v2(p, ctx())
@@ -85,14 +85,14 @@ class TestReport(unittest.TestCase):
             out = os.path.join(d, "out")
             rc, so, se = run_cli([os.path.join(d, "ev"), "-o", out, "-q", "--tz", "+05:30"])
             self.assertEqual(rc, 0, se)
-            for f in ("CAM_report.html", "CAM_technical_report.html", "CAM_activity.xlsx", "activity_timeline.csv",
+            for f in ("WinWitness_report.html", "WinWitness_technical_report.html", "WinWitness_activity.xlsx", "activity_timeline.csv",
                       "apps.csv", "services.csv", "permissions.csv", "programs.csv", "recovered.csv", "findings.csv",
-                      "camtool_results.json", "camtool_results.sqlite", "run_log.txt", "MANIFEST.sha256"):
+                      "winwitness_results.json", "winwitness_results.sqlite", "run_log.txt", "MANIFEST.sha256"):
                 self.assertTrue(os.path.isfile(os.path.join(out, f)), f)
             self.assertTrue(os.path.isfile(os.path.join(out, "csv", "technical", "usage.csv")))
-            with zipfile.ZipFile(os.path.join(out, "CAM_activity.xlsx")) as z:
+            with zipfile.ZipFile(os.path.join(out, "WinWitness_activity.xlsx")) as z:
                 self.assertEqual(len([n for n in z.namelist() if n.startswith("xl/worksheets/sheet")]), 7)
-            _, data = embedded(os.path.join(out, "CAM_report.html"))
+            _, data = embedded(os.path.join(out, "WinWitness_report.html"))
             self.assertGreater(len(data["activity"]), 100)
             hdr = open(os.path.join(out, "activity_timeline.csv"), encoding="utf-8-sig").readline()
             for col in ("Date", "Start (local)", "End (local)", "Duration", "Application", "Service", "Allowed/Blocked",

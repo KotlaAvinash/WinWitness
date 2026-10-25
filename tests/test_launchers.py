@@ -21,6 +21,14 @@ class TestLaunchers(unittest.TestCase):
         spec.loader.exec_module(mod)            # must import without opening a window
         self.assertTrue(hasattr(mod, "App"))
 
+    def test_package_is_named_winwitness(self):
+        self.assertTrue(os.path.isfile(os.path.join(ROOT, "winwitness", "__init__.py")))
+        self.assertFalse(os.path.exists(os.path.join(ROOT, "camtool")))
+
+    def test_default_output_folder_name(self):
+        src = open(os.path.join(ROOT, "winwitness", "cli.py"), encoding="utf-8").read()
+        self.assertIn('"winwitness_output_"', src)
+
     def test_old_launcher_names_gone(self):
         for old in ("camtool_cli.py", "camtool_gui.py"):
             self.assertFalse(os.path.exists(os.path.join(ROOT, old)), old)
