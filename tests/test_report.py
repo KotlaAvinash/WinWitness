@@ -17,7 +17,7 @@ def ctx(n=3):
                 service_desc="d", access="Allowed", user="u", sid="s", allowed_by="x", source="Database",
                 app_location="", installer="", sha1="", ref="r", note="", use_no="#1 of 1") for i in range(n)]
     act.sort(key=lambda r: r["when_utc"])
-    return dict(tool="CAMtool 2.0.0", generated_utc="2026-10-23 00:00:00", evidence_dir="E", tz_label="+05:30",
+    return dict(tool="WinWitness 2.1.0", generated_utc="2026-10-23 00:00:00", evidence_dir="E", tz_label="+05:30",
                 summary=dict(period="", accounts=[], system=""), activity=act, apps=[], features=[], permissions=[],
                 programs=[], findings=[], day_counts=[], hour_counts=[], evidence=[], integrity_ok=True,
                 technical_report="CAM_technical_report.html", method_html="<p>m</p>")
@@ -39,6 +39,16 @@ class TestReport(unittest.TestCase):
         pos = [html.find(f'id="{i}"') for i in ids]
         self.assertTrue(all(x > 0 for x in pos), dict(zip(ids, pos)))
         self.assertEqual(pos, sorted(pos))
+
+    def test_report_branded_winwitness(self):
+        from camtool import engine as E
+        self.assertEqual(E.TOOL_NAME, "WinWitness")
+        p = os.path.join(tempfile.mkdtemp(), "r.html")
+        R.write_html_v2(p, ctx())
+        html = open(p, encoding="utf-8").read()
+        self.assertIn("<title>WinWitness", html)
+        self.assertIn("WinWitness</div>", html.split('class="brand"')[1][:400])
+        self.assertNotIn("CAMtool", html.replace(ctx()["tool"], ""))
 
     def test_report_has_order_toggle_and_no_sticky_filters(self):
         p = os.path.join(tempfile.mkdtemp(), "r.html")

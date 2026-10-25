@@ -1,12 +1,14 @@
-# CAMtool
+# WinWitness
 
-CAMtool is a forensic parser for the Windows 11 **Capability Access Manager** databases: `CapabilityAccessManager.db` and `CapabilityConsentStorage.db`.
+**Your PC was a witness to every app that used your camera, microphone or location. WinWitness lets it testify.**
+
+WinWitness is a forensic parser for the Windows 11 **Capability Access Manager** databases: `CapabilityAccessManager.db` and `CapabilityConsentStorage.db`.
 
 It reads the databases together with their write-ahead log (WAL), WAL index (SHM), file slack and the NTFS `$I30` index entry. It recovers deleted records and reports everything as an HTML report, CSV, SQLite and JSON. Inputs are never modified.
 
 It is pure Python 3.10+ standard library, with nothing to install, and runs on Windows, Linux and macOS.
 
-![CAMtool report: summary](docs/images/overview.png)
+![WinWitness report: summary](docs/images/overview.png)
 
 ---
 
@@ -167,7 +169,7 @@ Integers in the history tables are foreign keys into lookup tables. Every lookup
 | `MigratedUsers` | `User, Value` | Accounts migrated into the database. Lists local SIDs even without usage |
 
 ### Things to know before you rely on it
-* **Never open the original files in a SQLite browser.** Opening checkpoints the WAL into the main file and truncates it. That destroys WAL-only rows and pages beyond the logical end of the database, which can hold deleted records. Always work on copies. CAMtool does this for you.
+* **Never open the original files in a SQLite browser.** Opening checkpoints the WAL into the main file and truncates it. That destroys WAL-only rows and pages beyond the logical end of the database, which can hold deleted records. Always work on copies. WinWitness does this for you.
 * The most recent event for an app may sit in the ConsentStore **registry** (`LastUsedTimeStart/Stop`) and not yet in the database. Check both (`--registry`).
 * History is pruned by age and by count. A missing row is not proof that nothing happened.
 * `location` only covers apps using the Windows location API.

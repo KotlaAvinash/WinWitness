@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Small Tkinter front-end for CAMtool. Double-click or run:  python camtool_gui.py"""
+"""Small Tkinter front-end for WinWitness. Double-click or run:  python camtool_gui.py"""
 import os
 import queue
 import sys
@@ -114,7 +114,7 @@ class App(tk.Tk):
         if self.running:
             return
         if not self.ev.get():
-            messagebox.showerror("CAMtool", "Choose the evidence folder first.")
+            messagebox.showerror("WinWitness", "Choose the evidence folder first.")
             return
         args = [self.ev.get(), "--tz", self.tz.get() or "+00:00"]
         if self.out.get():

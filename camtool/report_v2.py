@@ -60,6 +60,7 @@ svg.i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stro
 border-bottom:1px solid var(--line)}
 .top .in{max-width:1320px;margin:auto;padding:10px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .brand{display:flex;align-items:center;gap:10px;font-weight:650;font-size:15px}
+.sub-brand{color:var(--muted);font-size:13px;font-weight:500}@media (max-width:700px){.sub-brand{display:none}}
 .brand .logo{width:30px;height:30px;border-radius:8px;background:var(--accent);color:#fff;display:grid;place-items:center}
 .nav{display:flex;gap:4px;flex-wrap:wrap;margin-left:auto}
 .nav a{color:var(--text-2);text-decoration:none;font-size:13px;padding:5px 9px;border-radius:7px}
@@ -277,9 +278,9 @@ def write_html_v2(path: str, ctx: dict) -> None:
                       f"<td>{_esc(e.get('mtime_utc'))}</td><td>{'yes' if e.get('unchanged_after_run') else 'NO'}</td></tr>"
                       for e in ctx["evidence"])
     out = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CAM Activity Report</title><style>{CSS}</style></head><body>
+<title>WinWitness · Activity report</title><style>{CSS}</style></head><body>
 <svg width="0" height="0" style="position:absolute">{symbols}</svg>
-<div class="top"><div class="in"><div class="brand"><span class="logo">{icon('shield')}</span>Capability Access Manager · Activity report</div>
+<div class="top"><div class="in"><div class="brand"><span class="logo">{icon('shield')}</span>WinWitness</div><span class="sub-brand">Capability Access Manager activity report</span>
 <nav class="nav"><a href="#summary">Summary</a><a href="#activity">Timeline</a><a href="#apps">Apps</a><a href="#features">Services</a>
 <a href="#permissions">Permissions</a><a href="#programs">Programs</a><a href="#recovered">Recovered</a><a href="#findings">Findings</a>
 <a href="#technical">Technical</a></nav><button class="iconbtn" id="theme" title="Light / dark">{icon('moon')}</button></div></div>

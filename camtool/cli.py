@@ -24,7 +24,7 @@ METHOD_HTML = """
 <ol>
 <li><b>Intake.</b> Every input is hashed (SHA-256, MD5) and read once into memory. Inputs are never opened for writing.
 After the run they are hashed again and the report states whether anything changed.</li>
-<li><b>Two independent readers.</b> CAMtool walks the SQLite b-trees itself (main file + valid WAL frames) and, separately,
+<li><b>Two independent readers.</b> WinWitness walks the SQLite b-trees itself (main file + valid WAL frames) and, separately,
 lets the <code>sqlite3</code> library read a <i>temporary copy</i>. Both results are compared table by table.
 (Opening the original with any SQLite tool checkpoints the WAL and can truncate the file, destroying recoverable pages.)</li>
 <li><b>WAL history.</b> Frames are checksum-verified. The database is rebuilt at the last checkpoint and after every committed
@@ -59,7 +59,7 @@ database only when the same app uses the same capability again [published]. Use 
 
 
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(prog="camtool", description="Forensic parser for Windows CapabilityAccessManager.db "
+    ap = argparse.ArgumentParser(prog="winwitness", description="WinWitness: forensic parser for Windows CapabilityAccessManager.db "
                                  "and CapabilityConsentStorage.db (with WAL, slack and carving).")
     ap.add_argument("evidence", help="folder holding the databases (or the path of one .db file)")
     ap.add_argument("-o", "--out", help="output folder (default: ./camtool_output_<UTC time>)")
