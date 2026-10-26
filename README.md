@@ -102,15 +102,14 @@ Rows that are no longer in the live database: deleted rows carved from free spac
 The report follows the system theme. Use the moon button to switch between light and dark.
 
 ### Desktop window (GUI)
-`python winwitness_gui.py` opens a small window with these controls:
-* the evidence folder
-* the output folder
-* the local time offset
-* optional registry corroboration
-* an optional Amcache CSV
-* optional binary hashing
+![Desktop window](docs/images/gui.png)
 
-**Run analysis** shows the live log. **Open report** opens the HTML report above.
+`python winwitness_gui.py` opens a window in the same dark style as the report, with a short explanation under every field:
+* **1 Evidence folder.** As soon as you pick it, the window lists the files it found, and warns in orange when a database has no `-wal` next to it (as in the demo above, where the newest activity could be missing).
+* **2 Report folder.** Must be outside the evidence folder.
+* **3 Options.** Local time offset, registry check, Amcache CSV and program hashing, all optional.
+
+**Run analysis** shows the live log, ending with the integrity check. **Open report** opens the HTML report above.
 
 ### Try it with demo data
 ```bash
