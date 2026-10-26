@@ -15,8 +15,8 @@ from .carver import Carver, Carved, dedupe, repair_freeblock
 from .sqlite_low import (BTreeReader, FormatError, PageImage, page_free_regions, parse_db_header,
                          parse_shm, parse_wal, BTREE_TYPES)
 
-TOOL_NAME = "WinWitness"
-TOOL_VERSION = "2.1.0"
+TOOL_NAME = "App Access History"
+TOOL_VERSION = "2.2.0"
 
 
 # --------------------------------------------------------------------------- evidence intake
@@ -59,7 +59,7 @@ def load_evidence(path: str, keep_data: bool = True) -> EvidenceFile:
 
 
 def discover(folder: str) -> dict[str, str]:
-    """Map role -> path for the files WinWitness understands (case-insensitive, top level + 1 deep)."""
+    """Map role -> path for the files App Access History understands (case-insensitive, top level + 1 deep)."""
     roles = {}
     cands = []
     for root, dirs, files in os.walk(folder):
@@ -68,7 +68,7 @@ def discover(folder: str) -> dict[str, str]:
             dirs[:] = []
             continue
         # never descend into our own output or into the working copy area
-        dirs[:] = [d for d in dirs if d.lower() not in ("testing", "working tool", "winwitness_output", "__pycache__")]
+        dirs[:] = [d for d in dirs if d.lower() not in ("testing", "working tool", "app_access_history_output", "__pycache__")]
         for f in files:
             cands.append(os.path.join(root, f))
     for p in sorted(cands, key=lambda x: (x.count(os.sep), x)):

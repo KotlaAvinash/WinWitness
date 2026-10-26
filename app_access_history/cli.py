@@ -1,4 +1,4 @@
-"""WinWitness command line. Run:  python winwitness_cli.py <evidence folder> -o <output folder>"""
+"""App Access History command line. Run:  python app_access_history_cli.py <evidence folder> -o <output folder>"""
 from __future__ import annotations
 
 import argparse
@@ -24,7 +24,7 @@ METHOD_HTML = """
 <ol>
 <li><b>Intake.</b> Every input is hashed (SHA-256, MD5) and read once into memory. Inputs are never opened for writing.
 After the run they are hashed again and the report states whether anything changed.</li>
-<li><b>Two independent readers.</b> WinWitness walks the SQLite b-trees itself (main file + valid WAL frames) and, separately,
+<li><b>Two independent readers.</b> App Access History walks the SQLite b-trees itself (main file + valid WAL frames) and, separately,
 lets the <code>sqlite3</code> library read a <i>temporary copy</i>. Both results are compared table by table.
 (Opening the original with any SQLite tool checkpoints the WAL and can truncate the file, destroying recoverable pages.)</li>
 <li><b>WAL history.</b> Frames are checksum-verified. The database is rebuilt at the last checkpoint and after every committed
@@ -59,10 +59,10 @@ database only when the same app uses the same capability again [published]. Use 
 
 
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(prog="winwitness", description="WinWitness: forensic parser for Windows CapabilityAccessManager.db "
+    ap = argparse.ArgumentParser(prog="app-access-history", description="App Access History: forensic parser for Windows CapabilityAccessManager.db "
                                  "and CapabilityConsentStorage.db (with WAL, slack and carving).")
     ap.add_argument("evidence", help="folder holding the databases (or the path of one .db file)")
-    ap.add_argument("-o", "--out", help="output folder (default: ./winwitness_output_<UTC time>)")
+    ap.add_argument("-o", "--out", help="output folder (default: ./app_access_history_output_<UTC time>)")
     ap.add_argument("--tz", default="+00:00", help="offset for the local-time column, e.g. +05:30 (default UTC)")
     ap.add_argument("--registry", help="'live' to read this machine's HKCU/HKLM ConsentStore, or a .reg export file")
     ap.add_argument("--hash-binaries", action="store_true",
@@ -106,7 +106,7 @@ def run(a, tz) -> int:
         print(f"error: no {M.CAM_DB} or {M.CONSENT_DB} in {ev}", file=sys.stderr)
         return 2
 
-    out = os.path.abspath(a.out or os.path.join(os.getcwd(), "winwitness_output_" +
+    out = os.path.abspath(a.out or os.path.join(os.getcwd(), "app_access_history_output_" +
                                                  datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")))
     for p in roles.values():
         if os.path.abspath(p).startswith(out + os.sep):
@@ -134,7 +134,7 @@ def run(a, tz) -> int:
         f = files[role]
         log(f"intake {role:42s} {f.size:>10,} bytes sha256={f.sha256}")
 
-    tmp = tempfile.mkdtemp(prefix="winwitness_")
+    tmp = tempfile.mkdtemp(prefix="app_access_history_")
     A = C = None
     try:
         if M.CAM_DB in files:
@@ -337,13 +337,13 @@ def run(a, tz) -> int:
         for tname, (cols, rows) in V.analyst_tables(activity, apps, services, perms, programs, recovered,
                                                     findings).items():
             R.write_table_csv(os.path.join(out, tname + ".csv"), cols, rows)
-        XL.write_xlsx(os.path.join(out, "WinWitness_activity.xlsx"),
+        XL.write_xlsx(os.path.join(out, "AppAccessHistory_activity.xlsx"),
                       [(title, [c[0] for c in cols], [[r.get(c[1], "") for c in cols] for r in rows])
                        for title, (cols, rows) in zip(V.SHEET_TITLES, V.analyst_tables(
                            activity, apps, services, perms, programs, recovered, findings).values())])
         outputs.update(activity=activity, apps=apps, services=services, permissions=perms, programs=programs)
-        R.write_sqlite(os.path.join(out, "winwitness_results.sqlite"), {k: v for k, v in outputs.items()})
-        with open(os.path.join(out, "winwitness_results.json"), "w", encoding="utf-8") as jf:
+        R.write_sqlite(os.path.join(out, "app_access_history_results.sqlite"), {k: v for k, v in outputs.items()})
+        with open(os.path.join(out, "app_access_history_results.json"), "w", encoding="utf-8") as jf:
             json.dump(dict(tool=f"{E.TOOL_NAME} {E.TOOL_VERSION}", evidence=ev_rows, findings=findings,
                            activity=activity, apps=apps, services=services, permissions=perms, programs=programs,
                            usage=usage, carved=carved_all, wal_changes=wal_changes,
@@ -352,24 +352,24 @@ def run(a, tz) -> int:
                            corroboration={t: r for t, r in corr}), jf, indent=1, default=str, ensure_ascii=False)
         tzlabel = a.tz if a.tz not in ("+00:00", "UTC") else "+00:00"
         generated = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
-        R.write_html(os.path.join(out, "WinWitness_technical_report.html"), dict(
+        R.write_html(os.path.join(out, "AppAccessHistory_technical_report.html"), dict(
             tool=f"{E.TOOL_NAME} {E.TOOL_VERSION}", generated_utc=generated,
             evidence_dir=ev_dir, tz_label=tzlabel, cards=cards, findings=findings, evidence=ev_rows,
             integrity_ok=integrity_ok, timeline=timeline, usage=usage, carved_usage=carved_usage, carved_all=carved_all,
             wal_changes=wal_changes, prompts=cam["prompts"] if cam else [], identity=cam["identity"] if cam else [],
             consent=consent or {}, corroboration=corr, structure=structure, raw=raw, method_html=METHOD_HTML))
-        R.write_html_v2(os.path.join(out, "WinWitness_report.html"), dict(
+        R.write_html_v2(os.path.join(out, "AppAccessHistory_report.html"), dict(
             tool=f"{E.TOOL_NAME} {E.TOOL_VERSION}", generated_utc=generated, evidence_dir=ev_dir, tz_label=tzlabel,
             summary=V.summary(activity, software, names), activity=activity, apps=apps, features=services,
             permissions=perms, programs=programs, findings=findings, evidence=ev_rows, integrity_ok=integrity_ok,
-            technical_report="WinWitness_technical_report.html", method_html=METHOD_HTML))
-        log(f"wrote WinWitness_report.html, WinWitness_activity.xlsx, {len(V.SHEET_TITLES)} analyst CSVs, {len(outputs)} technical "
+            technical_report="AppAccessHistory_technical_report.html", method_html=METHOD_HTML))
+        log(f"wrote AppAccessHistory_report.html, AppAccessHistory_activity.xlsx, {len(V.SHEET_TITLES)} analyst CSVs, {len(outputs)} technical "
             f"CSVs, SQLite and JSON in {time.time() - t0:.2f}s ({len(activity)} timeline events)")
         log("findings: " + ", ".join(f"{k}={v}" for k, v in Counter(f['severity'] for f in findings).items()))
         logf.close()
         R.manifest(out)
         if not a.quiet:
-            print(f"\nReport: {os.path.join(out, 'WinWitness_report.html')}")
+            print(f"\nReport: {os.path.join(out, 'AppAccessHistory_report.html')}")
         return 0 if integrity_ok else 3
     finally:
         shutil.rmtree(tmp, ignore_errors=True)

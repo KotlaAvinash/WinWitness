@@ -1,14 +1,14 @@
-# WinWitness
+# App Access History
 
-**Your PC was a witness to every app that used your camera, microphone or location. WinWitness lets it testify.**
+**See which apps used your microphone, location, contacts, screen capture and passkeys on Windows, when, and for how long: further back than the 7-day "Recent activity" in Settings, including deleted records.**
 
-WinWitness is a forensic parser for the Windows 11 **Capability Access Manager** databases: `CapabilityAccessManager.db` and `CapabilityConsentStorage.db`.
+App Access History is a forensic parser for the Windows 11 **Capability Access Manager** databases: `CapabilityAccessManager.db` and `CapabilityConsentStorage.db`.
 
 It reads the databases together with their write-ahead log (WAL), WAL index (SHM), file slack and the NTFS `$I30` index entry. It recovers deleted records and reports everything as an HTML report, CSV, SQLite and JSON. Inputs are never modified.
 
 It is pure Python 3.10+ standard library, with nothing to install, and runs on Windows, Linux and macOS.
 
-![WinWitness report: summary](docs/images/overview.png)
+![App Access History report: summary](docs/images/overview.png)
 
 ---
 
@@ -104,7 +104,7 @@ The report follows the system theme. Use the moon button to switch between light
 ### Desktop window (GUI)
 ![Desktop window](docs/images/gui.png)
 
-`python winwitness_gui.py` opens a window in the same dark style as the report, with a short explanation under every field:
+`python app_access_history_gui.py` opens a window in the same dark style as the report, with a short explanation under every field:
 * **1 Evidence folder.** As soon as you pick it, the window lists the files it found, and warns in orange when a database has no `-wal` next to it (as in the demo above, where the newest activity could be missing).
 * **2 Report folder.** Must be outside the evidence folder.
 * **3 Options.** Local time offset, registry check, Amcache CSV and program hashing, all optional.
@@ -114,9 +114,9 @@ The report follows the system theme. Use the moon button to switch between light
 ### Try it with demo data
 ```bash
 python docs/demo/build_demo_evidence.py demo_evidence
-python winwitness_cli.py demo_evidence -o demo_report --tz +05:30
+python app_access_history_cli.py demo_evidence -o demo_report --tz +05:30
 ```
-Open `demo_report/WinWitness_report.html`. The demo contains live rows, rows only in the `-wal` file, deleted rows to recover, a blocked attempt, location prompts and programs run from unusual places.
+Open `demo_report/AppAccessHistory_report.html`. The demo contains live rows, rows only in the `-wal` file, deleted rows to recover, a blocked attempt, location prompts and programs run from unusual places.
 
 ---
 
@@ -168,7 +168,7 @@ Integers in the history tables are foreign keys into lookup tables. Every lookup
 | `MigratedUsers` | `User, Value` | Accounts migrated into the database. Lists local SIDs even without usage |
 
 ### Things to know before you rely on it
-* **Never open the original files in a SQLite browser.** Opening checkpoints the WAL into the main file and truncates it. That destroys WAL-only rows and pages beyond the logical end of the database, which can hold deleted records. Always work on copies. WinWitness does this for you.
+* **Never open the original files in a SQLite browser.** Opening and closing checkpoints the WAL into the main file, deletes the `-wal` and `-shm`, and truncates the file to its logical size. That destroys the WAL's history of earlier row versions and the pages beyond the logical end of the database, which can hold deleted records (measured: 173 deleted records and 8 WAL change records lost from one copy). Always work on copies. App Access History does this for you.
 * The most recent event for an app may sit in the ConsentStore **registry** (`LastUsedTimeStart/Stop`) and not yet in the database. Check both (`--registry`).
 * History is pruned by age and by count. A missing row is not proof that nothing happened.
 * `location` only covers apps using the Windows location API.
@@ -180,9 +180,9 @@ Integers in the history tables are foreign keys into lookup tables. Every lookup
 
 ### Run
 ```bash
-python winwitness_cli.py "<folder with the databases>" -o "<output folder>" --tz +05:30
+python app_access_history_cli.py "<folder with the databases>" -o "<output folder>" --tz +05:30
 ```
-GUI: `python winwitness_gui.py`. Pick the folder, click **Run analysis**, then **Open report**.
+GUI: `python app_access_history_gui.py`. Pick the folder, click **Run analysis**, then **Open report**.
 
 Files are found automatically by name (case-insensitive):
 * `CapabilityAccessManager.db` with its `-wal`, `-shm`, `.FileSlack` and `-wal.FileSlack`
@@ -199,7 +199,7 @@ You can also pass a single `.db` file.
 
 | Option | Purpose |
 |---|---|
-| `-o DIR` | Output folder. Default: `./winwitness_output_<UTC time>`. Must be outside the evidence folder; the tool refuses to write reports next to the evidence. |
+| `-o DIR` | Output folder. Default: `./app_access_history_output_<UTC time>`. Must be outside the evidence folder; the tool refuses to write reports next to the evidence. |
 | `--tz +HH:MM` | Adds a local-time column. UTC is always included |
 | `--registry live` | Compares with this machine's HKCU/HKLM ConsentStore. Only meaningful for the same machine and user; the report says whether the SID matches |
 | `--registry FILE.reg` | Compares with a `regedit` export of a ConsentStore key (e.g. from a loaded NTUSER.DAT) |
@@ -213,14 +213,14 @@ Exit codes: `0` ok · `1` nothing parseable · `2` bad arguments / no databases 
 ### Output
 | File | Content |
 |---|---|
-| `WinWitness_report.html` | The analyst report (one offline file, light/dark). See "Reading the report" below |
-| `WinWitness_activity.xlsx` | Excel workbook with 7 sheets: Activity timeline, Applications, Services, Permissions, Desktop programs, Recovered, Findings |
+| `AppAccessHistory_report.html` | The analyst report (one offline file, light/dark). See "Reading the report" below |
+| `AppAccessHistory_activity.xlsx` | Excel workbook with 7 sheets: Activity timeline, Applications, Services, Permissions, Desktop programs, Recovered, Findings |
 | `activity_timeline.csv` | One row per use or prompt, with columns: date, start/end (local and UTC), duration, application and type, service and what it means, Allowed/Blocked, account, allowed by, use # (e.g. `#3 of 12`), application location, installer, SHA-1, source and evidence record |
 | `apps.csv`, `services.csv`, `permissions.csv`, `programs.csv`, `recovered.csv`, `findings.csv` | The other analyst views |
-| `WinWitness_technical_report.html` | Database internals: page map, WAL frames and row diff, carving locations, raw tables, corroboration |
+| `AppAccessHistory_technical_report.html` | Database internals: page map, WAL frames and row diff, carving locations, raw tables, corroboration |
 | `csv/technical/` | One CSV per technical dataset, including every raw table |
-| `winwitness_results.sqlite` | All datasets in one queryable database |
-| `winwitness_results.json` | Everything, machine-readable |
+| `app_access_history_results.sqlite` | All datasets in one queryable database |
+| `app_access_history_results.json` | Everything, machine-readable |
 | `run_log.txt` | Timestamped log with the SHA-256 of every input |
 | `MANIFEST.sha256` | SHA-256 of every output file |
 
@@ -313,9 +313,9 @@ The suite builds synthetic evidence with known ground truth and checks:
 Optional environment variables:
 | Variable | Effect |
 |---|---|
-| `WINWITNESS_FUZZ_ROUNDS` | More fuzz rounds |
-| `WINWITNESS_FUZZ_SEED` | Fuzz seed |
-| `WINWITNESS_STRESS=big` | 1M rows / 20,000 transactions |
+| `APP_ACCESS_HISTORY_FUZZ_ROUNDS` | More fuzz rounds |
+| `APP_ACCESS_HISTORY_FUZZ_SEED` | Fuzz seed |
+| `APP_ACCESS_HISTORY_STRESS=big` | 1M rows / 20,000 transactions |
 
 ## 5. Limitations
 * Registry transaction logs (.LOG1/.LOG2) are not replayed, so a dirty hive shows its last flushed state. Amcache.hve is not parsed natively; use an AmcacheParser CSV.

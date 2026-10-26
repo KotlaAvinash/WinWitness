@@ -1,6 +1,6 @@
 __pycache__/
 *.pyc
-winwitness_output_*/
+app_access_history_output_*/
 # never commit evidence or results
 *.db
 *.db-wal

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Small Tkinter front-end for WinWitness. Double-click or run:  python winwitness_gui.py"""
+"""Small Tkinter front-end for App Access History. Double-click or run:  python app_access_history_gui.py"""
 import os
 import queue
 import sys
@@ -12,8 +12,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import tkinter as tk  # noqa: E402
 from tkinter import filedialog, messagebox, ttk  # noqa: E402
 
-from winwitness import cli  # noqa: E402
-from winwitness import engine as E  # noqa: E402
+from app_access_history import cli  # noqa: E402
+from app_access_history import engine as E  # noqa: E402
 
 # Same dark palette as the HTML report
 C = dict(bg="#121211", surface="#1a1a19", surface2="#232321", line="#33332f", text="#f0efec", text2="#c3c2b7",
@@ -99,7 +99,7 @@ class App(tk.Tk):
         for line in ("Activity timeline: which app used which service, start, end, duration and account.",
                      "Apps, services and permission settings, with who allowed or blocked what.",
                      "Recovered records: deleted rows and history hidden in the -wal and free space.",
-                     "WinWitness_report.html to open in any browser, plus Excel and CSV files."):
+                     "AppAccessHistory_report.html to open in any browser, plus Excel and CSV files."):
             self._hint(c4, "•  " + line).pack_configure(pady=(4, 0))
 
         # 3. options
@@ -275,7 +275,7 @@ class App(tk.Tk):
             self.ev.set(d)
             if not self.out.get():
                 stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-                self.out.set(os.path.join(os.path.dirname(d), f"winwitness_output_{stamp}"))
+                self.out.set(os.path.join(os.path.dirname(d), f"app_access_history_output_{stamp}"))
 
     def pick_out(self):
         d = filedialog.askdirectory(title="Report folder")
@@ -359,7 +359,7 @@ class App(tk.Tk):
 
     def open_report(self):
         if self.out_dir:
-            webbrowser.open("file:///" + os.path.join(self.out_dir, "WinWitness_report.html").replace("\\", "/"))
+            webbrowser.open("file:///" + os.path.join(self.out_dir, "AppAccessHistory_report.html").replace("\\", "/"))
 
     def open_folder(self):
         d = self.out_dir or self.out.get()

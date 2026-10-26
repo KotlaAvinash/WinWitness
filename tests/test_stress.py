@@ -1,6 +1,6 @@
 """Oracle equivalence + stress / scale tests.
 
-WINWITNESS_STRESS=big enables the large run (~1M rows, ~20k WAL transactions, 64 MiB slack).
+APP_ACCESS_HISTORY_STRESS=big enables the large run (~1M rows, ~20k WAL transactions, 64 MiB slack).
 """
 import os
 import random
@@ -10,12 +10,12 @@ import tempfile
 import time
 import unittest
 
-from winwitness import engine as E
-from winwitness import model as M
-from winwitness.sqlite_low import PageImage, parse_db_header, parse_wal
+from app_access_history import engine as E
+from app_access_history import model as M
+from app_access_history.sqlite_low import PageImage, parse_db_header, parse_wal
 from tests import fixtures as FX
 
-BIG = os.environ.get("WINWITNESS_STRESS") == "big"
+BIG = os.environ.get("APP_ACCESS_HISTORY_STRESS") == "big"
 
 
 def make_wal_db(d, n_rows, n_txn, seed=3, big_rows=False):
@@ -72,7 +72,7 @@ class TestOracle(unittest.TestCase):
                     h = parse_db_header(main)
                     w = parse_wal(wal)
                     base = PageImage(main, h)
-                    from winwitness.sqlite_low import BTreeReader
+                    from app_access_history.sqlite_low import BTreeReader
                     sch = BTreeReader(base).schema()
                     sigs = {s.table: s for s in (M.sig_from_sql(M.CAM_DB, x["name"], x["sql"]) for x in sch) if s}
                     errs = []
@@ -103,7 +103,7 @@ class TestStress(unittest.TestCase):
             rc, so, se = run_cli([ev, "-o", out, "-q"])
             el = time.time() - t
             self.assertEqual(rc, 0, se)
-            con = sqlite3.connect(os.path.join(out, "winwitness_results.sqlite"))
+            con = sqlite3.connect(os.path.join(out, "app_access_history_results.sqlite"))
             n_use = con.execute("select count(*) from usage").fetchone()[0]
             n_wal = con.execute("select count(*) from wal_changes").fetchone()[0]
             con.close()

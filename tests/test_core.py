@@ -10,12 +10,12 @@ import struct
 import tempfile
 import unittest
 
-from winwitness import engine as E
-from winwitness import model as M
-from winwitness.sqlite_low import (read_varint, parse_record, parse_db_header, parse_wal, serial_len, FormatError,
+from app_access_history import engine as E
+from app_access_history import model as M
+from app_access_history.sqlite_low import (read_varint, parse_record, parse_db_header, parse_wal, serial_len, FormatError,
                                 _wal_cksum)
-from winwitness.carver import Carver
-from winwitness.ntfs_i30 import parse_i30
+from app_access_history.carver import Carver
+from app_access_history.ntfs_i30 import parse_i30
 from tests import fixtures as FX
 
 
@@ -61,7 +61,7 @@ class TestPrimitives(unittest.TestCase):
         con.execute("insert into t values(?,?,?,?,?,?,?)", (b"\x00\x01", 127, -1, 32768, -2 ** 63, 0.0, ""))
         con.commit()
         con.close()
-        from winwitness.sqlite_low import PageImage, BTreeReader
+        from app_access_history.sqlite_low import PageImage, BTreeReader
         b = open(p, "rb").read()
         rd = BTreeReader(PageImage(b, parse_db_header(b)))
         root = [r for r in rd.schema() if r["name"] == "t"][0]["rootpage"]

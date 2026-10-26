@@ -1,4 +1,4 @@
-# WinWitness v2: an analyst-first report
+# App Access History v2: an analyst-first report
 
 ## Intent
 The v1 report is technically complete but unreadable. It opens on database internals, shows raw package IDs instead of app names, and never directly answers the analyst's question:
@@ -27,7 +27,7 @@ The user approved these requirements (2026-10-23):
   8. Findings
   9. Technical details (collapsed)
 * Single self-contained offline HTML file. Data is embedded as JSON and rendered and filtered by inline JS.
-* Excel export (`WinWitness_activity.xlsx`, one sheet per view), written with the standard library only. The analyst-facing CSVs sit at top level and the technical CSVs move to `csv/technical/`.
+* Excel export (`AppAccessHistory_activity.xlsx`, one sheet per view), written with the standard library only. The analyst-facing CSVs sit at top level and the technical CSVs move to `csv/technical/`.
 * Friendly names come from: AppNames → known-app table → a cleaned-up package/exe name. The raw ID is always kept in its own column.
 * Offline registry hive reader:
   * `NTUSER.DAT` gives ConsentStore last-use and per-app permission.

@@ -135,7 +135,7 @@ def write_html(path: str, ctx: dict):
     e = html.escape
     S = []
     S.append(f"<!doctype html><html lang=en><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'>"
-             f"<title>WinWitness · technical report</title><style>{CSS}</style></head><body>")
+             f"<title>App Access History · technical report</title><style>{CSS}</style></head><body>")
     S.append(f"<header><h1>Capability Access Manager — forensic report</h1><div class=sub>{e(ctx['tool'])} · "
              f"generated {e(ctx['generated_utc'])} UTC · evidence: <code>{e(ctx['evidence_dir'])}</code> · "
              f"local time column = UTC{e(ctx['tz_label'])}</div></header>")

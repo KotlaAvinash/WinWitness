@@ -5,7 +5,7 @@ import unittest
 import zipfile
 import xml.etree.ElementTree as ET
 
-from winwitness.xlsx import write_xlsx
+from app_access_history.xlsx import write_xlsx
 
 NS = {"m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
 

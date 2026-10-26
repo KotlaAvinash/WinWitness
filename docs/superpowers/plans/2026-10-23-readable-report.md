@@ -1,8 +1,8 @@
-# WinWitness v2 Readable Report Implementation Plan
+# App Access History v2 Readable Report Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Turn WinWitness's output into an analyst-first report: who used which feature, when, for how long, allowed or not, in time order, with app/feature/permission/program views, offline registry hives and an Excel export.
+**Goal:** Turn App Access History's output into an analyst-first report: who used which feature, when, for how long, allowed or not, in time order, with app/feature/permission/program views, offline registry hives and an Excel export.
 
 **Architecture:** The engine (sqlite_low, carver, engine, corroborate) stays as is. Three new modules sit between the engine and the report:
 * `regf.py`: offline hive reader
@@ -60,7 +60,7 @@
 ### Task 1: Offline registry hive reader
 
 **Files:**
-- Create: `winwitness/regf.py`
+- Create: `app_access_history/regf.py`
 - Create: `tests/hivegen.py` (writes a minimal valid regf hive)
 - Test: `tests/test_regf.py`
 
@@ -78,7 +78,7 @@
   * `test_truncated_hive_no_crash`: the first 5000 bytes of a generated hive give `key()` → None or a Key, never another exception.
   * `test_default_profile_hive` (skipped if `C:\Users\Default\NTUSER.DAT` is unreadable): the root has more than 5 subkeys, and `key("Control Panel")` is not None.
 - [ ] **Step 2:** Run `python -I tests/run_tests.py -k regf` → FAIL (module missing).
-- [ ] **Step 3: Implement `winwitness/regf.py`.**
+- [ ] **Step 3: Implement `app_access_history/regf.py`.**
   * Base block: `regf` signature; root cell offset at 0x24; hbins at 0x1000; cell offsets are relative to 0x1000.
   * nk record layout:
     * flags u16 @2
@@ -105,9 +105,9 @@
 ### Task 2: Registry hives as evidence
 
 **Files:**
-- Modify: `winwitness/corroborate.py` (add `read_hive_consentstore`, `read_software_hive`)
-- Modify: `winwitness/engine.py` `discover()`: roles `NTUSER.DAT` (may be several, keyed `NTUSER.DAT:<relative path>`) and `SOFTWARE`
-- Modify: `winwitness/cli.py`: when hives are present, use them as `reg` without needing `--registry`
+- Modify: `app_access_history/corroborate.py` (add `read_hive_consentstore`, `read_software_hive`)
+- Modify: `app_access_history/engine.py` `discover()`: roles `NTUSER.DAT` (may be several, keyed `NTUSER.DAT:<relative path>`) and `SOFTWARE`
+- Modify: `app_access_history/cli.py`: when hives are present, use them as `reg` without needing `--registry`
 - Test: `tests/test_regf.py`
 
 **Interfaces:**
@@ -128,7 +128,7 @@
 ### Task 3: Analyst views
 
 **Files:**
-- Create: `winwitness/views.py`
+- Create: `app_access_history/views.py`
 - Test: `tests/test_views.py`
 
 **Interfaces:**
@@ -181,7 +181,7 @@
 ### Task 4: Excel export
 
 **Files:**
-- Create: `winwitness/xlsx.py`
+- Create: `app_access_history/xlsx.py`
 - Test: `tests/test_xlsx.py`
 
 **Interfaces:**
@@ -200,8 +200,8 @@
 ### Task 5: Report v2 and output layout
 
 **Files:**
-- Modify: `winwitness/report.py` (add `write_html_v2(path, ctx)`; keep `write_html` for the technical appendix content builder)
-- Modify: `winwitness/cli.py` (build views; write `WinWitness_report.html` v2, `WinWitness_activity.xlsx`, top-level analyst CSVs; move the old CSVs to `csv/technical/`)
+- Modify: `app_access_history/report.py` (add `write_html_v2(path, ctx)`; keep `write_html` for the technical appendix content builder)
+- Modify: `app_access_history/cli.py` (build views; write `AppAccessHistory_report.html` v2, `AppAccessHistory_activity.xlsx`, top-level analyst CSVs; move the old CSVs to `csv/technical/`)
 - Modify: `tests/test_robustness.py` (update expected paths)
 - Test: `tests/test_report.py`
 
@@ -209,13 +209,13 @@
 - Consumes: Task 3 views, Task 4 `write_xlsx`.
 - Produces:
   * `write_html_v2(path: str, ctx: dict)` with ctx keys `summary, activity, apps, features, permissions, programs, recovered, findings, day_counts, technical_html, method_html, evidence, integrity_ok, tz_label, tool`.
-  * Output files at top level of the output folder: `WinWitness_report.html`, `WinWitness_activity.xlsx`, `activity_timeline.csv`, `apps.csv`, `features.csv`, `permissions.csv`, `programs.csv`, `recovered.csv`, `findings.csv`, `winwitness_results.json`, `winwitness_results.sqlite`, `run_log.txt`, `MANIFEST.sha256`, `csv/technical/*`.
+  * Output files at top level of the output folder: `AppAccessHistory_report.html`, `AppAccessHistory_activity.xlsx`, `activity_timeline.csv`, `apps.csv`, `features.csv`, `permissions.csv`, `programs.csv`, `recovered.csv`, `findings.csv`, `app_access_history_results.json`, `app_access_history_results.sqlite`, `run_log.txt`, `MANIFEST.sha256`, `csv/technical/*`.
 
 - [ ] **Step 1: Write the failing tests.**
   * `test_report_sections_in_order`: section ids `summary, activity, apps, features, permissions, programs, recovered, findings, technical` appear in this order.
   * `test_report_embedded_data_parses`: the `<script type="application/json" id="cam-data">` content is valid JSON, and its `activity` list is sorted by `when_utc`.
   * `test_report_large_activity`: 50,000 rows; the file is written; the JSON row count is 50,000.
-  * `test_output_layout`: a CLI run on the fixture gives the top-level files above; `WinWitness_activity.xlsx` opens as a zip with 7 sheets.
+  * `test_output_layout`: a CLI run on the fixture gives the top-level files above; `AppAccessHistory_activity.xlsx` opens as a zip with 7 sheets.
 - [ ] **Step 2:** Run → FAIL.
 - [ ] **Step 3: Implement.** The HTML must:
   * show a sticky header with summary cards (system, users, period covered, uses, apps, recovered, integrity)

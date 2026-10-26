@@ -2,7 +2,7 @@
 import os
 import unittest
 
-from winwitness.regf import Hive, RegfError
+from app_access_history.regf import Hive, RegfError
 from tests import hivegen
 
 DEFAULT_HIVE = r"C:\Users\Default\NTUSER.DAT"
@@ -85,7 +85,7 @@ class TestRegf(unittest.TestCase):
 
 class TestHiveEvidence(unittest.TestCase):
     def test_consentstore_from_hive(self):
-        from winwitness.corroborate import read_hive_consentstore
+        from app_access_history.corroborate import read_hive_consentstore
         b = hivegen.build({
             P(CS, "webcam"): {"Value": "Allow"},
             P(CS, "webcam", "Vendor.App_abcdefghijklm"): {"Value": "Prompt",
@@ -106,7 +106,7 @@ class TestHiveEvidence(unittest.TestCase):
         self.assertTrue(np_["hive"].startswith("HKCU"))
 
     def test_software_profiles_os_uninstall(self):
-        from winwitness.corroborate import read_software_hive
+        from app_access_history.corroborate import read_software_hive
         alice = P("C:", "Users", "alice")
         b = hivegen.build({
             P("Microsoft", "Windows NT", "CurrentVersion"): {"ProductName": "Windows 10 Pro", "DisplayVersion": "25H2",
@@ -136,7 +136,7 @@ class TestHiveEvidence(unittest.TestCase):
 
     def test_discover_finds_hives(self):
         import tempfile
-        from winwitness.engine import discover
+        from app_access_history.engine import discover
         d = tempfile.mkdtemp()
         os.makedirs(os.path.join(d, "Users", "alice"))
         open(os.path.join(d, "Users", "alice", "NTUSER.DAT"), "wb").write(hivegen.build({"A": {}}))
@@ -162,7 +162,7 @@ class TestHiveEvidence(unittest.TestCase):
             out = os.path.join(base, "out")
             rc, so, se = run_cli([d, "-o", out, "-q"])
             self.assertEqual(rc, 0, se)
-            res = json.load(open(os.path.join(out, "winwitness_results.json"), encoding="utf-8"))
+            res = json.load(open(os.path.join(out, "app_access_history_results.json"), encoding="utf-8"))
             self.assertTrue(any("NTUSER.DAT" in k for k in res["corroboration"]))
             log = open(os.path.join(out, "run_log.txt"), encoding="utf-8").read()
             self.assertIn("SOFTWARE: skipped", log)

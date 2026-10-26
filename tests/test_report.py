@@ -7,7 +7,7 @@ import tempfile
 import unittest
 import zipfile
 
-from winwitness import report as R
+from app_access_history import report as R
 
 
 def ctx(n=3):
@@ -17,10 +17,10 @@ def ctx(n=3):
                 service_desc="d", access="Allowed", user="u", sid="s", allowed_by="x", source="Database",
                 app_location="", installer="", sha1="", ref="r", note="", use_no="#1 of 1") for i in range(n)]
     act.sort(key=lambda r: r["when_utc"])
-    return dict(tool="WinWitness 2.1.0", generated_utc="2026-10-23 00:00:00", evidence_dir="E", tz_label="+05:30",
+    return dict(tool="App Access History 2.2.0", generated_utc="2026-10-23 00:00:00", evidence_dir="E", tz_label="+05:30",
                 summary=dict(period="", accounts=[], system=""), activity=act, apps=[], features=[], permissions=[],
                 programs=[], findings=[], day_counts=[], hour_counts=[], evidence=[], integrity_ok=True,
-                technical_report="WinWitness_technical_report.html", method_html="<p>m</p>")
+                technical_report="AppAccessHistory_technical_report.html", method_html="<p>m</p>")
 
 
 def embedded(path):
@@ -40,15 +40,16 @@ class TestReport(unittest.TestCase):
         self.assertTrue(all(x > 0 for x in pos), dict(zip(ids, pos)))
         self.assertEqual(pos, sorted(pos))
 
-    def test_report_branded_winwitness(self):
-        from winwitness import engine as E
-        self.assertEqual(E.TOOL_NAME, "WinWitness")
+    def test_report_branded_app_access_history(self):
+        from app_access_history import engine as E
+        self.assertEqual(E.TOOL_NAME, "App Access History")
         p = os.path.join(tempfile.mkdtemp(), "r.html")
         R.write_html_v2(p, ctx())
         html = open(p, encoding="utf-8").read()
-        self.assertIn("<title>WinWitness", html)
-        self.assertIn("WinWitness</div>", html.split('class="brand"')[1][:400])
-        self.assertNotIn("CAMtool", html.replace(ctx()["tool"], ""))
+        self.assertIn("<title>App Access History", html)
+        self.assertIn("App Access History</div>", html.split('class="brand"')[1][:400])
+        for old in ("CAMtool", "WinWitness"):
+            self.assertNotIn(old, html.replace(ctx()["tool"], ""))
 
     def test_report_has_order_toggle_and_no_sticky_filters(self):
         p = os.path.join(tempfile.mkdtemp(), "r.html")
@@ -85,14 +86,14 @@ class TestReport(unittest.TestCase):
             out = os.path.join(d, "out")
             rc, so, se = run_cli([os.path.join(d, "ev"), "-o", out, "-q", "--tz", "+05:30"])
             self.assertEqual(rc, 0, se)
-            for f in ("WinWitness_report.html", "WinWitness_technical_report.html", "WinWitness_activity.xlsx", "activity_timeline.csv",
+            for f in ("AppAccessHistory_report.html", "AppAccessHistory_technical_report.html", "AppAccessHistory_activity.xlsx", "activity_timeline.csv",
                       "apps.csv", "services.csv", "permissions.csv", "programs.csv", "recovered.csv", "findings.csv",
-                      "winwitness_results.json", "winwitness_results.sqlite", "run_log.txt", "MANIFEST.sha256"):
+                      "app_access_history_results.json", "app_access_history_results.sqlite", "run_log.txt", "MANIFEST.sha256"):
                 self.assertTrue(os.path.isfile(os.path.join(out, f)), f)
             self.assertTrue(os.path.isfile(os.path.join(out, "csv", "technical", "usage.csv")))
-            with zipfile.ZipFile(os.path.join(out, "WinWitness_activity.xlsx")) as z:
+            with zipfile.ZipFile(os.path.join(out, "AppAccessHistory_activity.xlsx")) as z:
                 self.assertEqual(len([n for n in z.namelist() if n.startswith("xl/worksheets/sheet")]), 7)
-            _, data = embedded(os.path.join(out, "WinWitness_report.html"))
+            _, data = embedded(os.path.join(out, "AppAccessHistory_report.html"))
             self.assertGreater(len(data["activity"]), 100)
             hdr = open(os.path.join(out, "activity_timeline.csv"), encoding="utf-8-sig").readline()
             for col in ("Date", "Start (local)", "End (local)", "Duration", "Application", "Service", "Allowed/Blocked",

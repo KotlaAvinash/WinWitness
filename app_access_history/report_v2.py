@@ -278,9 +278,9 @@ def write_html_v2(path: str, ctx: dict) -> None:
                       f"<td>{_esc(e.get('mtime_utc'))}</td><td>{'yes' if e.get('unchanged_after_run') else 'NO'}</td></tr>"
                       for e in ctx["evidence"])
     out = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>WinWitness · Activity report</title><style>{CSS}</style></head><body>
+<title>App Access History · Activity report</title><style>{CSS}</style></head><body>
 <svg width="0" height="0" style="position:absolute">{symbols}</svg>
-<div class="top"><div class="in"><div class="brand"><span class="logo">{icon('shield')}</span>WinWitness</div><span class="sub-brand">Capability Access Manager activity report</span>
+<div class="top"><div class="in"><div class="brand"><span class="logo">{icon('shield')}</span>App Access History</div><span class="sub-brand">Capability Access Manager activity report</span>
 <nav class="nav"><a href="#summary">Summary</a><a href="#activity">Timeline</a><a href="#apps">Apps</a><a href="#features">Services</a>
 <a href="#permissions">Permissions</a><a href="#programs">Programs</a><a href="#recovered">Recovered</a><a href="#findings">Findings</a>
 <a href="#technical">Technical</a></nav><button class="iconbtn" id="theme" title="Light / dark">{icon('moon')}</button></div></div>
