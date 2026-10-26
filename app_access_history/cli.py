@@ -47,7 +47,7 @@ ConsentStore registry (live or .reg), SHA-1 of the binaries (first 31,457,280 by
 <h3>Limits</h3>
 <ul>
 <li>The most recent access per app/capability lives in the ConsentStore <b>registry</b>, not the database: it is moved to the
-database only when the same app uses the same capability again [published]. Use <code>--registry</code> to see it.</li>
+database only when the same app uses the same capability again [published]. On build 26200 the opposite was observed for the microphone: the registry stopped updating while the database kept recording [observed]. Use <code>--registry</code> to compare both.</li>
 <li>History is purged after ExpirationPolicyInDays (default 30) [published]; absence of a row is not absence of activity.</li>
 <li>Location rows record use of the Windows location API only; an app can learn location by other means.</li>
 <li>FileID is taken from Amcache when the row is written, so it can reflect the binary at that later moment [published].</li>

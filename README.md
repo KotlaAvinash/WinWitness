@@ -134,7 +134,7 @@ Windows gates access to privacy-sensitive features such as camera, microphone, l
 The folder path is set in `HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\CapabilityUsageHistory\DatabaseRoot`. The same key holds the retention settings `ExpirationPolicyInDays` (default 30) and `MaximumSizeOnWrite`.
 
 ### Why it matters
-* It answers *when* an app used the webcam, microphone, location, contacts, screen capture or passkeys, and for how long.
+* It answers *when* an app used the microphone, location, contacts, screen capture or passkeys, and for how long (all measured on a Windows 11 build 26200 PC). Camera use did not happen during the test window, so whether this database records the camera is not yet confirmed; the ConsentStore registry does hold per-app camera last-use times.
 * For desktop (non-packaged) apps it records the full executable path, the Amcache **FileID** (`0000` + SHA-1 of the first 31,457,280 bytes) and the **ProgramID**. This ties usage to a specific binary version, including binaries run from Temp, USB or other drives.
 * Location-prompt and identity tables record each new binary that asked for location, often reaching back far beyond the 30-day usage window.
 * The consent database shows the user's privacy choices and lists paired Bluetooth devices and passkey relying parties (sites).
@@ -144,7 +144,7 @@ Integers in the history tables are foreign keys into lookup tables. Every lookup
 
 | Table | Columns | Notes |
 |---|---|---|
-| **PackagedUsageHistory** | `ID, LastUsedTimeStart, LastUsedTimeStop, AccessBlocked, Capability, PackageFamilyName, UserSid, AccessGUID, Label, AppName, Context` | Store / packaged apps. Times are FILETIME (UTC). `AccessBlocked` 0 = allowed. `ID` increments and is never reused, so gaps mean rows were removed. |
+| **PackagedUsageHistory** | `ID, LastUsedTimeStart, LastUsedTimeStop, AccessBlocked, Capability, PackageFamilyName, UserSid, AccessGUID, Label, AppName, Context` | Store / packaged apps. Times are FILETIME (UTC). `AccessBlocked` 0 = allowed. `ID` is the next number after the current highest (no AUTOINCREMENT), so gaps mean rows were removed. |
 | **NonPackagedUsageHistory** | `ID, LastUsedTimeStart, LastUsedTimeStop, AccessBlocked, Capability, FileID, ProgramID, BinaryFullPath, UserSid, AppName, ServiceName, AccessGUID, Label, Context` | Classic Win32 apps. Adds hash, program and path. |
 | **NonPackagedIdentityRelationship** | `ID, BinaryFullPath, FileID, ProgramID, LastObservedTime` | One row per binary identity. `LastObservedTime` is effectively the *first* time it was seen. |
 | **NonPackagedGlobalPromptHistory** | `ID, ShownTime, Capability, FileID, ProgramID, UserSid, BinaryName` | A global consent prompt (typically location) shown for a new binary identity. |
@@ -168,8 +168,8 @@ Integers in the history tables are foreign keys into lookup tables. Every lookup
 | `MigratedUsers` | `User, Value` | Accounts migrated into the database. Lists local SIDs even without usage |
 
 ### Things to know before you rely on it
-* **Never open the original files in a SQLite browser.** Opening and closing checkpoints the WAL into the main file, deletes the `-wal` and `-shm`, and truncates the file to its logical size. That destroys the WAL's history of earlier row versions and the pages beyond the logical end of the database, which can hold deleted records (measured: 173 deleted records and 8 WAL change records lost from one copy). Always work on copies. App Access History does this for you.
-* The most recent event for an app may sit in the ConsentStore **registry** (`LastUsedTimeStart/Stop`) and not yet in the database. Check both (`--registry`).
+* **Never open the original files in a SQLite browser.** Opening and closing checkpoints the WAL into the main file, deletes the `-wal` and `-shm`, and truncates the file to its logical size. That destroys the WAL's history of earlier row versions and the pages beyond the logical end of the database, which can hold deleted records (measured: all 174 deleted records past the end of the file and all 8 WAL change records lost from one copy, after a single open and close with no edits). Always work on copies. App Access History does this for you.
+* Published research says the most recent event for an app may sit in the ConsentStore **registry** (`LastUsedTimeStart/Stop`) and not yet in the database. On the build 26200 test PC the opposite was observed for the microphone: the registry stopped updating after 2 Oct while the database kept recording uses on 23 to 25 Oct. Check both (`--registry`).
 * History is pruned by age and by count. A missing row is not proof that nothing happened.
 * `location` only covers apps using the Windows location API.
 * A FileID is copied from Amcache when the row is written, so it may describe a later version of the binary.
@@ -192,7 +192,7 @@ Files are found automatically by name (case-insensitive):
 
 | Hive | Adds |
 |---|---|
-| NTUSER.DAT | The ConsentStore last-use time per app (often the only record of older camera/microphone use), per-app settings, and when each setting was last changed |
+| NTUSER.DAT | The ConsentStore last-use time per app (on the test PC, the only record of camera use, and of microphone use before 2 Oct), per-app settings, and when each setting was last changed |
 | SOFTWARE | Account names for SIDs, the Windows version, machine-wide settings, retention settings, and **installer details** (install folder, install source, publisher, version, install date) |
 
 You can also pass a single `.db` file.
@@ -320,7 +320,7 @@ Optional environment variables:
 ## 5. Limitations
 * Registry transaction logs (.LOG1/.LOG2) are not replayed, so a dirty hive shows its last flushed state. Amcache.hve is not parsed natively; use an AmcacheParser CSV.
 * Windows records the **account** for each use, not which person clicked "Allow". The consent databases hold the *current* setting, not a history of changes.
-* After a purge, lookup IDs can be reused. A recovered row whose application identity was purged is therefore never named from another (possibly reused) ID.
+* After a purge, lookup IDs are reused (observed: PackageFamilyNames ID 28 was `MicrosoftWindows.Client.CBS` in one extract and `Microsoft.XboxGamingOverlay` three days later). A recovered row whose application identity was purged is therefore never named from another (possibly reused) ID.
 * Inputs are loaded into memory, which is comfortable up to a few hundred MB per file.
 * Meanings of `Label`, `Context` and `AccessGUID` are unknown and reported raw.
 
@@ -328,3 +328,6 @@ Optional environment variables:
 * Cyber Sundae DFIR, *CapabilityAccessManager.db Deep Dive* [Part 1](https://medium.com/@cyber.sundae.dfir/capabilityaccessmanager-db-deep-dive-part-1-ff49f69c58af), [Part 2](https://medium.com/@cyber.sundae.dfir/capabilityaccessmanager-db-deep-dive-part-2-e44fd9b92933), [Part 3](https://medium.com/@cyber.sundae.dfir/capabilityaccessmanager-db-deep-dive-part-3-801092e1ead9)
 * NVISO, [Amcache contains SHA-1 hash – it depends](https://blog.nviso.eu/2022/03/07/amcache-contains-sha-1-hash-it-depends/)
 * SQLite [database file format](https://www.sqlite.org/fileformat.html)
+
+## License
+[MIT](LICENSE). Free to use, change and share.
